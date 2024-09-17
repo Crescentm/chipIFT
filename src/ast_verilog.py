@@ -6,7 +6,7 @@ import pyverilog.vparser.ast as vast
 import os
 
 
-def file_exists(file_list: list) -> bool:
+def file_exists(file_list: list):
     if len(file_list) == 0:
         return None
 
@@ -31,7 +31,7 @@ class DFGVerilog:
             file_list, topmodule, noreorder, nobind, include_list, define_list
         )
         analyzer.generate()
-        self.directives: list[vdfg.Directive] = analyzer.get_directives()
+        self.directives: tuple = analyzer.get_directives()
         self.instances: tuple = analyzer.getInstances()
         self.terms: dict[vscope.ScopeChain, vdfg.Term] = analyzer.getTerms()
         self.binddict: dict[vscope.ScopeChain, list[vdfg.Bind]] = analyzer.getBinddict()
@@ -51,22 +51,12 @@ class ASTVerilog:
             debug=False,
         )
 
-        self.ast: vast.Source = ast
-        self.module_num = len(self.ast.children()[0].children())
-        self.modules: vast.ModuleDef = self.ast.children()[0].children()
+        self.source: vast.Source = ast.children()[0]
+        self.module_num = len(ast.children()[0].children())
+        self.modules: vast.ModuleDef = ast.children()[0].children()
 
-    def decls_add(self, delcs):
-        modules = self.ast.children()[0].children()
-        # for now, just one module
-        module: vast.ModuleDef = modules[0]
-        delc_list = module.items
-
-        last_decl_index = 0
-        for i, node in enumerate(delc_list):
-            if isinstance(node, vast.Decl):
-                last_decl_index = i
-
-        print(last_decl_index)
+    def decls_add(self, delcs: list[vast.Decl], module: vast.ModuleDef):
+        print(self.modules)
 
     def gen_code(self):
         pass
@@ -82,15 +72,14 @@ class VerilogParser:
         self.define_list: list = define_list
         self.ast: ASTVerilog = ASTVerilog(file_list, include_list, define_list)
         self.dfg: DFGVerilog = DFGVerilog(
-            file_list, include_list, define_list
+            file_list, include_list=include_list, define_list=define_list
         )  # Just ignore the other args
 
 
 def ast_pasrser_test():
-    filelist = ["./tests/test.v"]
-    ast = ASTVerilog(filelist)
-    # ast.decls_add(vast.Decl("reg", vast.Identifier("a")))
-    dfg: DFGVerilog = ast.dfg
+    file_list = ["./tests/test.v"]
+    verilog = VerilogParser(file_list)
+    print(verilog.ast.decls_add([], verilog.ast.modules))
 
 
 if __name__ == "__main__":
