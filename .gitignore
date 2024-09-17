@@ -86,7 +86,6 @@ venv.bak/
 # Icon must end with two \r
 Icon
 
-
 # Thumbnails
 ._*
 
@@ -118,3 +117,7 @@ Temporary Items
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+# fucking pyverilog
+parser.out
+parsetab.py

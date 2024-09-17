@@ -185,10 +185,10 @@ test = ["pytest (>=3.8.1)", "pytest-pythonpath (>=0.7.3)"]
 [package.source]
 type = "git"
 url = "https://github.com/barnard33-233/Pyverilog.git"
-reference = "HEAD"
+reference = "develop"
 resolved_reference = "81838bc463d17148ef6872af34eb27585ee349ba"
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "a650f0ca32622b14270301f126febe258e031b2c27a224f9829f8fc52c0ccb83"
+content-hash = "bf31d0ac544b1b276e6a552e9c7e7c3bba74c2bb91a914469a2cab8d80eca8cb"
