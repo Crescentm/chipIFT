@@ -13,6 +13,7 @@ pyverilog = { git = "https://github.com/barnard33-233/Pyverilog.git", branch = "
 jinja2 = "^3.1.4"
 ply = "^3.11"
 pytest = "^8.3.3"
+black = "^24.8.0"
 
 
 [build-system]
