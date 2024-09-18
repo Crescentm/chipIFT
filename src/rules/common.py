@@ -1,83 +1,86 @@
-from copy import deepcopy
-from types import new_class
-import pyverilog
-import pyverilog.dataflow.dataflow as vdfg
+from collections.abc import Iterable
 import pyverilog.vparser.ast as vast
-from pyverilog.vparser.parser import Source
-from ast_verilog import DFGVerilog
-from rules.rules import VerilogOperator
+import src.rules.rules as rules
 import copy
 
-def track_flow(node: vast.Node) -> vast.Node:
-    pass
 
+"""
+Generate IFT snippet
+"""
 class FlowTracker(object):
-    assignment_kw = (
-            "assign"
+    assignment_operator = (
+            vast.Assign, vast.NonblockingSubstitution, vast.BlockingSubstitution
             )
-    volatile_variables = (
-            vast.Reg,
-            vast.Wire,
-            vast.Tri
-            )
-    def __init__(self, ast: vast.Source, cfg) -> None:
-        self.ast: vast.Source = ast
-        self.cfg = cfg
-        self.result = dict()
 
-    def tracking(self) -> None:
-        pass
+    def __init__(self, term_list: list) -> None:
+        self.term_list = term_list
 
-    def _list_modules(self, source: vast.Source) -> list:
-        modules = []
-        for description in source.children():
-            module_defs = list(description.children())
-            modules += module_defs
-        return modules
+    """
+    process generate
+    """
+    def track_flow(self, node: vast.Node, module_name: str) -> vast.Node:
+        name_list = tuple(_[0] for _ in self.term_list if _[1] == module_name)
+        assert (type(node) in self.assignment_operator)
+        if type(node) is vast.Assign:
+            lval = node.left
+            rval = node.right
+        elif isinstance(node, vast.Substitution):
+            lval = node.left
+            rval = node.right
+        else:
+            raise TypeError #XXX
 
-    def _track_module(self, module: vast.ModuleDef) -> None:
-        changes_in_module = []
-        port_tags = []
-        decl_tags = []
-        for child in module.children():
-            match type(child):
-                case vast.Portlist:
-                    self._add_port_tags(child)
-                case vast.Paramlist:
-                    pass
-                case vast.Decl:
-                    self._add_decl_tag(child)
-                case vast.InstanceList:
-                    self._modify_instance(child)
-                case _:
-                    pass
+        ltag = self._replace_name(lval, name_list)
+        rtag = self._traverse_subtree(rval, name_list)
 
-    def _add_port_tags(self, portlist: vast.Portlist) -> list:
-        tags = []
-        for ioport in portlist.children(): # "copy" each port
-            assert(type(ioport) is vast.Ioport)
-            # first
-            first = copy.deepcopy(ioport.first)
-            first.name = f"{first.name}_t"
-            # second
-            if ioport.second:
-                second = copy.deepcopy(ioport.second)
-                second.name = f"{second.name}_t"
+        match type(node):
+            case vast.Assign:
+                new_node = vast.Assign(left=ltag, right=rtag)
+            case vast.NonblockingSubstitution:
+                new_node = vast.NonblockingSubstitution(left=ltag, right=rtag)
+            case vast.BlockingSubstitution:
+                new_node = vast.BlockingSubstitution(left=ltag, right=rtag)
+        return new_node
+        
+    def _replace_name(self, node: vast.Lvalue, name_list: tuple) -> vast.Lvalue:
+        new_node = copy.deepcopy(node)
+        self._do_replace_name(new_node, name_list)
+        return new_node
+
+    def _do_replace_name(self, node: vast.Node, name_list: tuple) -> None:
+        if type(node) is vast.Identifier:
+            if node.name in name_list:
+                
+                node.name = f"{node.name}_t"
+        children = node.children()
+        if type(children) is tuple:
+            for child in children:
+                self._do_replace_name(child, name_list)
+
+    def _traverse_subtree(self, node: vast.Rvalue, name_list: tuple) -> vast.Rvalue:
+        new_var = self._do_traverse_subtree(node.var, name_list)
+        new_node = vast.Rvalue(var = new_var)
+        return new_node
+
+    def _do_traverse_subtree(self, node: vast.Node, name_list: tuple) -> vast.Node:
+        children = node.children()
+        children_tags = []
+        if type(children) is tuple:
+            for child in children:
+                child_tag = self._do_traverse_subtree(child, name_list)
+                children_tags.append(child_tag)
+
+        if isinstance(node, vast.Operator):
+            new_node = rules.rule_set[type(node)](children, children_tags).gen_rule()
+        elif type(node) is vast.Identifier:
+            if node.name in name_list:
+                new_node = vast.Identifier(name = f"{node.name}_t")
             else:
-                second = None
-            new_port = vast.Ioport(first=first, second=second)
-            tags.append(new_port)
-        return tags
-
-    def _add_decl_tag(self, decl: vast.Decl) -> list:
-        tags = []
-        for child in decl.children():
-            # assert(type(child) is vast.Variable)
-            if type(child) in self.volatile_variables:
-                pass
-        return tags
-
-    def _modify_instance(self, instance_list: vast.InstanceList) -> None:
-        pass
-
+                new_node = copy.deepcopy(node)
+        elif isinstance(node, vast.Constant):
+            new_node = type(node)(value = 0)
+        else:
+            # TODO: copy the logic
+            pass
+        return new_node
 
