@@ -31,6 +31,50 @@ cases = {
         lambda ast: ast.description.definitions[0].items[0],  # path to block
         "bitwiseor",
     ),
+    "andor": (
+        ["verilogcode/andor.v"],
+        [
+            ("x", "andor"),
+            ("y", "andor"),
+            ("z", "andor"),
+            ("o", "andor"),
+        ],
+        lambda ast: ast.description.definitions[0].items[0],  # path to block
+        "andor",
+    ),
+    "repeat": (
+        ["verilogcode/other_node.v"],
+        [
+            ("x", "top"),
+            ("y", "top"),
+            ("o1", "top"),
+            ("o2", "top"),
+        ],
+        lambda ast: ast.description.definitions[0].items[0],
+        "top",
+    ),
+    "pointer": (
+        ["verilogcode/other_node.v"],
+        [
+            ("x", "top"),
+            ("y", "top"),
+            ("o1", "top"),
+            ("o2", "top"),
+        ],
+        lambda ast: ast.description.definitions[0].items[1],
+        "top",
+    ),
+    "partselect": (
+        ["verilogcode/other_node.v"],
+        [
+            ("x", "top"),
+            ("y", "top"),
+            ("o1", "top"),
+            ("o2", "top"),
+        ],
+        lambda ast: ast.description.definitions[0].items[2],
+        "top",
+    ),
 }
 
 
@@ -51,3 +95,7 @@ def test(thiscase: tuple):
 # define test
 test(cases["and"])
 test(cases["or"])
+test(cases["andor"])
+test(cases["repeat"])
+test(cases["pointer"])
+test(cases["partselect"])

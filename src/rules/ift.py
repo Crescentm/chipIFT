@@ -87,7 +87,9 @@ class LorIFT(OperatorIFT):
 
 # bitwise
 class NotIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Operator:
+        Y = 0
+        return self.operands_tags[Y]
 
 
 class AndIFT(OperatorIFT):
@@ -118,11 +120,17 @@ class OrIFT(OperatorIFT):
 
 
 class XorIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Operator:
+        X = 0
+        Y = 1
+        return vast.Or(self.operands_tags[X], self.operands_tags[Y])
 
 
 class XnorIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Operator:
+        X = 0
+        Y = 1
+        return vast.Or(self.operands_tags[X], self.operands_tags[Y])
 
 
 # Relational
@@ -162,7 +170,7 @@ class NeIFT(OperatorIFT):
     pass
 
 
-# Shift
+# Shift (impercise)
 class LshiftaIFT(OperatorIFT):
     pass
 
