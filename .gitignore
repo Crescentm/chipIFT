@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# nix
+.direnv
+
 # C extensions
 *.so
 
@@ -105,6 +108,7 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+.nvim/*
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
