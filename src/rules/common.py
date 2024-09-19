@@ -16,8 +16,9 @@ class FlowTracker(object):
         vast.BlockingSubstitution,
     )
 
-    def __init__(self, term_list: list) -> None:
+    def __init__(self, term_list: list, conditions: list = []) -> None:
         self.term_list = term_list
+        self.conditions = conditions
 
     """
     process generate
@@ -36,7 +37,8 @@ class FlowTracker(object):
             raise TypeError  # XXX
 
         ltag = self._replace_name(lval, name_list)
-        rtag = self._traverse_subtree(rval, name_list)
+        # TODO: check wether lval is in conditions
+        rtag = self._track_rval(rval, name_list, False) # TODO: change me later
 
         match type(node):
             case vast.Assign:
@@ -62,17 +64,22 @@ class FlowTracker(object):
             for child in children:
                 self._do_replace_name(child, name_list)
 
-    def _traverse_subtree(self, node: vast.Rvalue, name_list: tuple) -> vast.Rvalue:
-        new_var = self._do_traverse_subtree(node.var, name_list)
+    def _track_rval(self, node: vast.Rvalue, name_list: tuple, have_imp=False) -> vast.Rvalue:
+        exp_ift = self._traverse_subtree(node.var, name_list)
+        if have_imp:
+            imp_ift = self._implicit_ift()
+            new_var = vast.Or(left=exp_ift, right=imp_ift)
+        else:
+            new_var = exp_ift
         new_node = vast.Rvalue(var=new_var)
         return new_node
 
-    def _do_traverse_subtree(self, node: vast.Node, name_list: tuple) -> vast.Node:
+    def _traverse_subtree(self, node: vast.Node, name_list: tuple) -> vast.Node:
         children = node.children()
         children_tags = []
         if type(children) is tuple:
             for child in children:
-                child_tag = self._do_traverse_subtree(child, name_list)
+                child_tag = self._traverse_subtree(child, name_list)
                 children_tags.append(child_tag)
 
         if isinstance(node, vast.Operator):
@@ -88,3 +95,6 @@ class FlowTracker(object):
             # TODO: copy the logic
             pass
         return new_node
+
+    def _implicit_ift(self) -> vast.Node:
+        return vast.IntConst(value = "0") # TODO: change me later
