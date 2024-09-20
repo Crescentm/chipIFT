@@ -9,14 +9,14 @@ class OperatorIFT(object):
         self.operands = operands
         self.operands_tags = operands_tags
 
-    def gen_rule(self) -> vast.Operator:
+    def gen_rule(self) -> vast.Node:
         # print("rule not implemented yet...")
-        return vast.Operator(left=None, right=None)
+        return vast.IntConst(value="0")
 
 
 # Reductions:
 class UandIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Operator:
+    def gen_rule(self) -> vast.Node:
         Y = 0
         Y_t = self.operands_tags[Y]
         uor_Yt = vast.Uor(right=Y_t)
@@ -38,7 +38,7 @@ class UnandIFT(OperatorIFT):
 
 
 class UorIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Operator:
+    def gen_rule(self) -> vast.Node:
         Y = self.operands[0]
         Y_t = self.operands_tags[0]
         uor_Yt = vast.Uor(right=Y_t)
@@ -50,7 +50,7 @@ class UorIFT(OperatorIFT):
 
 
 class UnorIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Operator:
+    def gen_rule(self) -> vast.Node:
         Y = self.operands[0]
         Y_t = self.operands_tags[0]
         uor_Yt = vast.Uor(right=Y_t)
@@ -62,7 +62,7 @@ class UnorIFT(OperatorIFT):
 
 
 class UxorIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Operator:
+    def gen_rule(self) -> vast.Node:
         Y_t = self.operands_tags[0]
         uor_Yt = vast.Uor(right=Y_t)
         result = uor_Yt
@@ -70,7 +70,7 @@ class UxorIFT(OperatorIFT):
 
 
 class UxnorIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Operator:
+    def gen_rule(self) -> vast.Node:
         Y_t = self.operands_tags[0]
         uor_Yt = vast.Uor(right=Y_t)
         result = uor_Yt
@@ -79,11 +79,13 @@ class UxnorIFT(OperatorIFT):
 
 # Arithmetic
 class UplusIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Node:
+        return self.operands_tags[0]
 
 
 class UminusIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Node:
+        return self.operands_tags[0]
 
 
 class PlusIFT(OperatorIFT):
@@ -91,8 +93,23 @@ class PlusIFT(OperatorIFT):
 
 
 class MinusIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Node:
+        X = 0
+        Y = 1
+        X_or_Xt = vast.Or(self.operands[X], self.operands_tags[X])
+        not_Yt = vast.Unot(self.operands_tags[Y])
+        Y_and_not_Yt = vast.And(self.operands[Y], not_Yt)
+        minus1 = vast.Minus(X_or_Xt, Y_and_not_Yt)
 
+        not_Xt = vast.Unot(self.operands_tags[X])
+        X_and_not_Xt = vast.And(self.operands[X], not_Xt)
+        Y_or_Yt = vast.Or(self.operands[Y], self.operands_tags[Y])
+        minus2 = vast.Minus(X_and_not_Xt, Y_or_Yt)
+
+        minus1_xor_minus2 = vast.Xor(minus1, minus2)
+        Xt_or_Yt = vast.Or(self.operands_tags[X], self.operands_tags[Y])
+        result = vast.Or(minus1_xor_minus2, Xt_or_Yt)
+        return result
 
 class TimesIFT(OperatorIFT):
     pass
@@ -125,13 +142,13 @@ class LorIFT(OperatorIFT):
 
 # bitwise
 class NotIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Operator:
+    def gen_rule(self) -> vast.Node:
         Y = 0
         return self.operands_tags[Y]
 
 
 class AndIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Operator:
+    def gen_rule(self) -> vast.Node:
         # XXX: copy or not
         X = 0
         Y = 1
@@ -144,7 +161,7 @@ class AndIFT(OperatorIFT):
 
 
 class OrIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Operator:
+    def gen_rule(self) -> vast.Node:
         X = 0
         Y = 1
         not_X = vast.Unot(right=self.operands[X])
@@ -158,14 +175,14 @@ class OrIFT(OperatorIFT):
 
 
 class XorIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Operator:
+    def gen_rule(self) -> vast.Node:
         X = 0
         Y = 1
         return vast.Or(self.operands_tags[X], self.operands_tags[Y])
 
 
 class XnorIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Operator:
+    def gen_rule(self) -> vast.Node:
         X = 0
         Y = 1
         return vast.Or(self.operands_tags[X], self.operands_tags[Y])
