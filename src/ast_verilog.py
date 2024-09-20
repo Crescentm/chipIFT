@@ -1,16 +1,15 @@
-import pprint
+from src.utils import *
+from src.rules.common import *
 from pyverilog.vparser.parser import parse
 from pyverilog.dataflow.dataflow_analyzer import VerilogDataflowAnalyzer
 from pyverilog.ast_code_generator.codegen import ASTCodeGenerator
 from pyverilog.dataflow.dataflow_codegen import VerilogCodeGenerator
 from pyverilog.dataflow.optimizer import VerilogDataflowOptimizer
-from src.utils import *
-from src.rules.common import *
-import copy
 import pyverilog.dataflow.dataflow as vdfg
 import pyverilog.utils.scope as vscope
 import pyverilog.vparser.ast as vast
 import inspect
+import copy
 
 
 class CFGVerilog:
@@ -236,25 +235,5 @@ class VerilogParser:
         )  # Just ignore the other args
 
 
-def tarverse_example():
-    file_list = ["./verilogcode/test2.v"]
-    ast = ASTVerilog(file_list)
-    for i in range(ast.module_num):
-        ast.traverse_modify_ast(module_index=i)
-    print(ast.gen_code())
-
-
-def dfg_example():
-    file_list = ["./verilogcode/test.v"]
-    dfg = DFGVerilog(file_list, topmodule="top")
-    dfg.gen_taint_vars()
-    ret = dfg.gen_taint_vars()
-    pprint.pprint(ret)
-
-
-def test():
-    print(vast.Node)
-
-
 if __name__ == "__main__":
-    tarverse_example()
+    pass
