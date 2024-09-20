@@ -20,21 +20,20 @@ class UandIFT(OperatorIFT):
         Y = 0
         Y_t = self.operands_tags[Y]
         uor_Yt = vast.Uor(right=Y_t)
-        not_Yt = vast.Unot(right=Y_t)
-        not_Yt_or_Yt = vast.Or(left=not_Yt, right=Y_t)
-        uand_not_Yt_or_Yt = vast.Uand(right=not_Yt_or_Yt)
-        result = vast.And(left=uor_Yt, right=uand_not_Yt_or_Yt)
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        uand_Y_or_Yt = vast.Uand(right=Y_or_Yt)
+        result = vast.And(left=uor_Yt, right=uand_Y_or_Yt)
         return result
 
 
 class UnandIFT(OperatorIFT):
     def gen_rule(self) -> vast.Operator:
-        Y_t = self.operands_tags[0]
+        Y = 0
+        Y_t = self.operands_tags[Y]
         uor_Yt = vast.Uor(right=Y_t)
-        not_Yt = vast.Unot(right=Y_t)
-        not_Yt_or_Yt = vast.Or(left=not_Yt, right=Y_t)
-        uand_not_Yt_or_Yt = vast.Uand(right=not_Yt_or_Yt)
-        result = vast.And(left=uor_Yt, right=uand_not_Yt_or_Yt)
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        uand_Y_or_Yt = vast.Uand(right=Y_or_Yt)
+        result = vast.And(left=uor_Yt, right=uand_Y_or_Yt)
         return result
 
 
@@ -43,9 +42,10 @@ class UorIFT(OperatorIFT):
         Y = self.operands[0]
         Y_t = self.operands_tags[0]
         uor_Yt = vast.Uor(right=Y_t)
-        Y_or_Yt = vast.Or(left=Y, right=Y_t)
-        uand_Y_or_Yt = vast.Uand(right=Y_or_Yt)
-        result = vast.And(left=uor_Yt, right=uand_Y_or_Yt)
+        not_Y = vast.Unot(right=Y)
+        not_Y_or_Yt = vast.Or(left=not_Y, right=Y_t)
+        uand_not_Y_or_Yt = vast.Uand(right=not_Y_or_Yt)
+        result = vast.And(left=uor_Yt, right=uand_not_Y_or_Yt)
         return result
 
 
@@ -54,9 +54,10 @@ class UnorIFT(OperatorIFT):
         Y = self.operands[0]
         Y_t = self.operands_tags[0]
         uor_Yt = vast.Uor(right=Y_t)
-        Y_or_Yt = vast.Or(left=Y, right=Y_t)
-        uand_Y_or_Yt = vast.Uand(right=Y_or_Yt)
-        result = vast.And(left=uor_Yt, right=uand_Y_or_Yt)
+        not_Y = vast.Unot(right=Y)
+        not_Y_or_Yt = vast.Or(left=not_Y, right=Y_t)
+        uand_not_Y_or_Yt = vast.Uand(right=not_Y_or_Yt)
+        result = vast.And(left=uor_Yt, right=uand_not_Y_or_Yt)
         return result
 
 

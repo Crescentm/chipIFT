@@ -180,6 +180,16 @@ class ASTVerilog:
                         | vast.AlwaysComb
                         | vast.AlwaysLatch
                         | vast.Width
+                        | vast.GenerateStatement
+                        | vast.Block
+                        | vast.Case
+                        | vast.CaseStatement
+                        | vast.CasexStatement
+                        | vast.CasezStatement
+                        | vast.WhileStatement
+                        | vast.ForStatement
+                        | vast.Partselect
+                        | vast.Repeat
                     ):
                         params = [
                             param
@@ -227,7 +237,7 @@ class VerilogParser:
 
 
 def tarverse_example():
-    file_list = ["./verilogcode/test.v"]
+    file_list = ["./verilogcode/test2.v"]
     ast = ASTVerilog(file_list)
     for i in range(ast.module_num):
         ast.traverse_modify_ast(module_index=i)
