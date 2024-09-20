@@ -16,27 +16,64 @@ class OperatorIFT(object):
 
 # Reductions:
 class UandIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Operator:
+        Y = 0
+        Y_t = self.operands_tags[Y]
+        uor_Yt = vast.Uor(right=Y_t)
+        not_Yt = vast.Unot(right=Y_t)
+        not_Yt_or_Yt = vast.Or(left=not_Yt, right=Y_t)
+        uand_not_Yt_or_Yt = vast.Uand(right=not_Yt_or_Yt)
+        result = vast.And(left=uor_Yt, right=uand_not_Yt_or_Yt)
+        return result
 
 
 class UnandIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Operator:
+        Y_t = self.operands_tags[0]
+        uor_Yt = vast.Uor(right=Y_t)
+        not_Yt = vast.Unot(right=Y_t)
+        not_Yt_or_Yt = vast.Or(left=not_Yt, right=Y_t)
+        uand_not_Yt_or_Yt = vast.Uand(right=not_Yt_or_Yt)
+        result = vast.And(left=uor_Yt, right=uand_not_Yt_or_Yt)
+        return result
 
 
 class UorIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Operator:
+        Y = self.operands[0]
+        Y_t = self.operands_tags[0]
+        uor_Yt = vast.Uor(right=Y_t)
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        uand_Y_or_Yt = vast.Uand(right=Y_or_Yt)
+        result = vast.And(left=uor_Yt, right=uand_Y_or_Yt)
+        return result
 
 
 class UnorIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Operator:
+        Y = self.operands[0]
+        Y_t = self.operands_tags[0]
+        uor_Yt = vast.Uor(right=Y_t)
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        uand_Y_or_Yt = vast.Uand(right=Y_or_Yt)
+        result = vast.And(left=uor_Yt, right=uand_Y_or_Yt)
+        return result
 
 
 class UxorIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Operator:
+        Y_t = self.operands_tags[0]
+        uor_Yt = vast.Uor(right=Y_t)
+        result = uor_Yt
+        return result
 
 
 class UxnorIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Operator:
+        Y_t = self.operands_tags[0]
+        uor_Yt = vast.Uor(right=Y_t)
+        result = uor_Yt
+        return result
 
 
 # Arithmetic

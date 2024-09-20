@@ -1,6 +1,49 @@
 import pyverilog.vparser.ast as vast
+import pyverilog.dataflow.dataflow as vdfg
 from enum import Enum
 import os
+
+dfop_mark = {
+    "Uminus": vast.Uminus,
+    "Ulnot": vast.Ulnot,
+    "Unot": vast.Unot,
+    "Uand": vast.Uand,
+    "Unand": vast.Unand,
+    "Uor": vast.Uor,
+    "Unor": vast.Unor,
+    "Uxor": vast.Uxor,
+    "Uxnor": vast.Uxnor,
+    "Power": vast.Power,
+    "Times": vast.Times,
+    "Divide": vast.Divide,
+    "Mod": vast.Mod,
+    "Plus": vast.Plus,
+    "Minus": vast.Minus,
+    "Sll": vast.Sll,
+    "Srl": vast.Srl,
+    "Sla": vast.Sla,
+    "Sra": vast.Sra,
+    "LessThan": vast.LessThan,
+    "GreaterThan": vast.GreaterThan,
+    "LessEq": vast.LessEq,
+    "GreaterEq": vast.GreaterEq,
+    "Eq": vast.Eq,
+    "NotEq": vast.NotEq,
+    "Eql": vast.Eql,
+    "NotEql": vast.NotEql,
+    "And": vast.And,
+    "Xor": vast.Xor,
+    "Xnor": vast.Xnor,
+    "Or": vast.Or,
+    "Land": vast.Land,
+    "Lor": vast.Lor,
+}
+
+const_mark = {
+    vdfg.DFIntConst: vast.IntConst,
+    vdfg.DFFloatConst: vast.FloatConst,
+    vdfg.DFStringConst: vast.StringConst,
+}
 
 
 def file_exists(file_list: list):
@@ -10,6 +53,35 @@ def file_exists(file_list: list):
     for f in file_list:
         if not os.path.exists(f):
             raise IOError("file not found: " + f)
+
+
+def dfnode_2_astnode(dfnode):
+    match type(dfnode):
+        case vdfg.DFOperator:
+            if len(dfnode.nextnodes) == 1:
+                ret = dfnode_2_astnode(dfnode.nextnodes[0])
+                return dfop_mark[dfnode.operator](right=ret)  # type: ignore
+            elif len(dfnode.nextnodes) == 2:
+                retl = dfnode_2_astnode(dfnode.nextnodes[0])
+                retr = dfnode_2_astnode(dfnode.nextnodes[1])
+                return dfop_mark[dfnode.operator](left=retl, right=retr)  # type: ignore
+            else:
+                raise ValueError("Invalid number of operands")
+        case vdfg.DFIntConst | vdfg.DFFloatConst | vdfg.DFStringConst:
+            ret = dfnode.eval()
+            return const_mark[type(dfnode)](str(ret))
+        case vdfg.DFTerminal:
+            return vast.Identifier(dfnode.name[-1:].tocode())
+        case vdfg.DFEvalValue:
+            if dfnode.isstring:
+                return vast.StringConst(dfnode.value)
+            elif dfnode.isfloat:
+                return vast.FloatConst(dfnode.value)
+            else:
+                return vast.IntConst(dfnode.value)
+        case _:
+            print("Unknown type: ", type(dfnode))
+            return dfnode
 
 
 class DeclType(Enum):

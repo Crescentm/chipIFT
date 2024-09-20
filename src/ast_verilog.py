@@ -10,6 +10,19 @@ import copy
 import pyverilog.dataflow.dataflow as vdfg
 import pyverilog.utils.scope as vscope
 import pyverilog.vparser.ast as vast
+import inspect
+
+
+class CFGVerilog:
+
+    def __init__(
+        self,
+        file_list: list,
+        topmodule: str = "top",
+        include_list=[],
+        define_list=[],
+    ) -> None:
+        pass
 
 
 class DFGVerilog:
@@ -73,7 +86,7 @@ class DFGVerilog:
             var_name = str(value.name[-1:])
             module_type = instance_dict[value.name[:-1]]
             var_type = tuple(value.termtype)
-            taint_var.append((var_name, module_type, var_type))
+            taint_var.append((var_name, module_type, value))
 
         return taint_var
 
@@ -114,15 +127,14 @@ class ASTVerilog:
         flow_tracker = FlowTracker(term_list=terms_list)
 
         def traverse(node):
-            children: tuple = node.children()
+            # node may be a tuple or a single node
+            if not isinstance(node, tuple):
+                children = (node,)
+            else:
+                children = node
             children_new = []
-            if len(children) == 0:
-                return ()
             for child in children:
                 match type(child):
-                    case vast.Portlist | vast.Decl | vast.Concat | vast.SensList:
-                        ret = traverse(child)
-                        children_new.append(type(child)(ret))
                     case vast.Ioport:
                         children_new.append(child)
                         # TODO: if Input/Output/Inout have nested structure
@@ -143,18 +155,60 @@ class ASTVerilog:
                         ret = flow_tracker.track_flow(child, module.name)
                         children_new.append(ret)
                     case (
+                        vast.Substitution
+                        | vast.NonblockingSubstitution
+                        | vast.BlockingSubstitution
+                    ):
+                        children_new.append(child)
+                        ret = flow_tracker.track_flow(child, module.name)
+                        children_new.append(ret)
+                    case (
                         vast.Constant
                         | vast.IntConst
                         | vast.FloatConst
                         | vast.StringConst
                     ):
                         children_new.append(child)
+                    case (
+                        vast.Decl
+                        | vast.Concat
+                        | vast.SensList
+                        | vast.Portlist
+                        | vast.IfStatement
+                        | vast.Always
+                        | vast.AlwaysFF
+                        | vast.AlwaysComb
+                        | vast.AlwaysLatch
+                        | vast.Width
+                    ):
+                        params = [
+                            param
+                            for param in inspect.signature(
+                                child.__class__.__init__
+                            ).parameters.values()
+                            if param.name != "self"
+                        ]
+                        param_values = {
+                            param.name: getattr(child, param.name, param.default)
+                            for param in params
+                        }
+                        for key, value in param_values.items():
+                            ret = traverse(value)
+                            param_values[key] = ret
+
+                        children_new.append((child.__class__)(**param_values))
                     case _:
                         children_new.append(child)
-            return tuple(children_new)
 
-        ret = traverse(module)
-        module_list[module_index] = vast.ModuleDef(module.name, ret[0], ret[1], ret[2:])  # type: ignore
+            if not isinstance(node, tuple):
+                return children_new[0]
+            else:
+                return tuple(children_new)
+
+        ret1 = traverse(module.paramlist)
+        ret2 = traverse(module.portlist)
+        ret3 = traverse(module.items)
+        module_list[module_index] = vast.ModuleDef(module.name, ret1, ret2, ret3)
         self.source.description.definitions = tuple(module_list)
 
 
@@ -173,7 +227,7 @@ class VerilogParser:
 
 
 def tarverse_example():
-    file_list = ["./verilogcode/and.v"]
+    file_list = ["./verilogcode/test.v"]
     ast = ASTVerilog(file_list)
     for i in range(ast.module_num):
         ast.traverse_modify_ast(module_index=i)
@@ -181,9 +235,11 @@ def tarverse_example():
 
 
 def dfg_example():
-    file_list = ["./verilogcode/test2.v"]
-    dfg = DFGVerilog(file_list, topmodule="top_module")
-    pprint.pprint(dfg.gen_taint_vars())
+    file_list = ["./verilogcode/test.v"]
+    dfg = DFGVerilog(file_list, topmodule="top")
+    dfg.gen_taint_vars()
+    ret = dfg.gen_taint_vars()
+    pprint.pprint(ret)
 
 
 def test():
