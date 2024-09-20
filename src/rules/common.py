@@ -1,4 +1,3 @@
-from collections.abc import Iterable
 import pyverilog.vparser.ast as vast
 import src.rules.ift as ift
 import copy
@@ -16,8 +15,9 @@ class FlowTracker(object):
         vast.BlockingSubstitution,
     )
 
-    def __init__(self, term_list: list) -> None:
+    def __init__(self, term_list: list, conditions: list = []) -> None:
         self.term_list = term_list
+        self.conditions = conditions
 
     """
     process generate
@@ -36,7 +36,8 @@ class FlowTracker(object):
             raise TypeError  # XXX
 
         ltag = self._replace_name(lval, name_list)
-        rtag = self._traverse_subtree(rval, name_list)
+        # TODO: check wether lval is in conditions
+        rtag = self._track_rval(rval, name_list, False)  # TODO: change me later
 
         match type(node):
             case vast.Assign:
@@ -62,29 +63,61 @@ class FlowTracker(object):
             for child in children:
                 self._do_replace_name(child, name_list)
 
-    def _traverse_subtree(self, node: vast.Rvalue, name_list: tuple) -> vast.Rvalue:
-        new_var = self._do_traverse_subtree(node.var, name_list)
+    def _track_rval(
+        self, node: vast.Rvalue, name_list: tuple, have_imp=False
+    ) -> vast.Rvalue:
+        exp_ift = self._traverse_subtree(node.var, name_list)
+        if have_imp:
+            imp_ift = self._implicit_ift()
+            new_var = vast.Or(left=exp_ift, right=imp_ift)
+        else:
+            new_var = exp_ift
         new_node = vast.Rvalue(var=new_var)
         return new_node
 
-    def _do_traverse_subtree(self, node: vast.Node, name_list: tuple) -> vast.Node:
+    def _traverse_subtree(
+        self,
+        node: vast.Node,
+        name_list: tuple,
+    ) -> vast.Node:
+
         children = node.children()
         children_tags = []
         if type(children) is tuple:
             for child in children:
-                child_tag = self._do_traverse_subtree(child, name_list)
+                child_tag = self._traverse_subtree(
+                    child,
+                    name_list,
+                )
                 children_tags.append(child_tag)
 
         if isinstance(node, vast.Operator):
-            new_node = ift.rule_set[type(node)](children, children_tags).gen_rule()
-        elif type(node) is vast.Identifier:
-            if node.name in name_list:
-                new_node = vast.Identifier(name=f"{node.name}_t")
+            if type(node) in ift.rule_set:
+                op_ift = ift.rule_set[type(node)]
+                new_node = op_ift(children, children_tags).gen_rule()
             else:
-                new_node = copy.deepcopy(node)
+                new_node = ift.OperatorIFT().gen_rule()
         elif isinstance(node, vast.Constant):
-            new_node = type(node)(value=0)
+            new_node = type(node)(value="0")
         else:
-            # TODO: copy the logic
-            pass
+            match type(node):
+                case vast.Identifier:
+                    if node.name in name_list:
+                        new_node = vast.Identifier(name=f"{node.name}_t")
+                    else:
+                        new_node = copy.deepcopy(node)
+                case vast.Partselect:
+                    new_node = vast.Partselect(children_tags[0], node.msb, node.lsb)
+                case vast.Pointer:
+                    new_node = vast.Pointer(var=children_tags[0], ptr=node.ptr)
+                case vast.Repeat:
+                    new_node = vast.Repeat(value=children_tags[0], times=node.times)
+                    pass
+                case vast.Concat:
+                    new_node = vast.Concat(children_tags)
+                case _:
+                    new_node = vast.Node()
         return new_node
+
+    def _implicit_ift(self) -> vast.Node:
+        return vast.IntConst(value="0")  # TODO: change me later

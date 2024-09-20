@@ -14,12 +14,66 @@ cases = {
     "and": (
         ["verilogcode/and.v"],  # filelist
         [
-            ("x", "bitwiseand", ("Wire", "Input")),
-            ("y", "bitwiseand", ("Wire", "Input")),
-            ("o", "bitwiseand", ("Wire", "Output")),
+            ("x", "bitwiseand"),
+            ("y", "bitwiseand"),
+            ("o", "bitwiseand"),
         ],  # termlist
         lambda ast: ast.description.definitions[0].items[0],  # path to block
         "bitwiseand",  # top module name
+    ),
+    "or": (
+        ["verilogcode/or.v"],
+        [
+            ("x", "bitwiseor"),
+            ("y", "bitwiseor"),
+            ("o", "bitwiseor"),
+        ],
+        lambda ast: ast.description.definitions[0].items[0],  # path to block
+        "bitwiseor",
+    ),
+    "andor": (
+        ["verilogcode/andor.v"],
+        [
+            ("x", "andor"),
+            ("y", "andor"),
+            ("z", "andor"),
+            ("o", "andor"),
+        ],
+        lambda ast: ast.description.definitions[0].items[0],  # path to block
+        "andor",
+    ),
+    "repeat": (
+        ["verilogcode/other_node.v"],
+        [
+            ("x", "top"),
+            ("y", "top"),
+            ("o1", "top"),
+            ("o2", "top"),
+        ],
+        lambda ast: ast.description.definitions[0].items[0],
+        "top",
+    ),
+    "pointer": (
+        ["verilogcode/other_node.v"],
+        [
+            ("x", "top"),
+            ("y", "top"),
+            ("o1", "top"),
+            ("o2", "top"),
+        ],
+        lambda ast: ast.description.definitions[0].items[1],
+        "top",
+    ),
+    "partselect": (
+        ["verilogcode/other_node.v"],
+        [
+            ("x", "top"),
+            ("y", "top"),
+            ("o1", "top"),
+            ("o2", "top"),
+        ],
+        lambda ast: ast.description.definitions[0].items[2],
+        "top",
     ),
 }
 
@@ -35,8 +89,13 @@ def test(thiscase: tuple):
         print("Line %d : %s" % (lineno, directive))
     thiscase[2](ast).show()
     result = common.FlowTracker(thiscase[1]).track_flow(thiscase[2](ast), thiscase[3])
-    # result.show()
+    result.show()
 
 
 # define test
 test(cases["and"])
+test(cases["or"])
+test(cases["andor"])
+test(cases["repeat"])
+test(cases["pointer"])
+test(cases["partselect"])
