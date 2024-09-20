@@ -92,14 +92,36 @@ class UminusIFT(OperatorIFT):
 
         X_or_Xt = vast.Or(self.operands[X], self.operands_tags[X])
         neg2 = vast.Uminus(X_or_Xt)
-        
+
         neg1_xor_neg2 = vast.Xor(neg1, neg2)
         result = vast.Or(neg1_xor_neg2, self.operands_tags[X])
         return result
 
 
 class PlusIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Operator:
+        X = self.operands[0]
+        Y = self.operands[1]
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        not_Xt = vast.Unot(right=X_t)
+        X_and_not_Xt = vast.And(left=X, right=not_Xt)
+
+        not_Yt = vast.Unot(right=Y_t)
+        Y_and_not_Yt = vast.And(left=Y, right=not_Yt)
+        sum1 = vast.Plus(left=X_and_not_Xt, right=Y_and_not_Yt)
+
+        X_or_Xt = vast.Or(left=X, right=X_t)
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        sum2 = vast.Plus(left=X_or_Xt, right=Y_or_Yt)
+
+        xor_result = vast.Xor(left=sum1, right=sum2)
+        or_with_Xt = vast.Or(left=xor_result, right=X_t)
+
+        result = vast.Or(left=or_with_Xt, right=Y_t)
+
+        return result
 
 
 class MinusIFT(OperatorIFT):
@@ -121,12 +143,24 @@ class MinusIFT(OperatorIFT):
         result = vast.Or(minus1_xor_minus2, Xt_or_Yt)
         return result
 
+
 class TimesIFT(OperatorIFT):
-    pass
+
+    def gen_rule(self) -> vast.Node:
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        result = vast.Or(left=X_t, right=Y_t)
+        return result
 
 
 class DivideIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Node:
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        result = vast.Or(left=X_t, right=Y_t)
+        return result
 
 
 class ModIFT(OperatorIFT):
@@ -139,15 +173,80 @@ class PowerIFT(OperatorIFT):
 
 # Logical
 class LnotIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.And:
+        Y = self.operands[0]
+        Y_t = self.operands_tags[0]
+        not_Yt = vast.Unot(right=Y_t)
+        Y_and_not_Yt = vast.And(left=Y, right=not_Yt)
+        lnot_Y_and_not_Yt = vast.Ulnot(right=Y_and_not_Yt)
+        uor_Yt = vast.Uor(right=Y_t)
+        return vast.And(left=lnot_Y_and_not_Yt, right=uor_Yt)
 
 
 class LandIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Xor:
+        X = self.operands[0]
+        Y = self.operands[1]
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        # (| (X & ~X_t))
+        unot_Xt = vast.Unot(right=X_t)
+        X_and_unot_Xt = vast.And(left=X, right=unot_Xt)
+        uor_X_and_unot_Xt = vast.Uor(right=X_and_unot_Xt)
+        # (| (Y & ~Y_t))
+        unot_Yt = vast.Unot(right=Y_t)
+        Y_and_unot_Yt = vast.And(left=Y, right=unot_Yt)
+        uor_Y_and_unot_Yt = vast.Uor(right=Y_and_unot_Yt)
+        # ( (| (X & ~X_t)) & (| (Y & ~Y_t)) )
+        and_part = vast.And(left=uor_X_and_unot_Xt, right=uor_Y_and_unot_Yt)
+
+        # (| (X | X_t))
+        X_or_Xt = vast.Or(left=X, right=X_t)
+        uor_X_or_Xt = vast.Uor(right=X_or_Xt)
+        # (| (Y | Y_t))
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        uor_Y_or_Yt = vast.Uor(right=Y_or_Yt)
+        # ( (| (X | X_t)) & (| (Y | Y_t)) )
+        and_part2 = vast.And(left=uor_X_or_Xt, right=uor_Y_or_Yt)
+
+        # O_t = ( (|(X & ~X_t)) & (|(Y & ~Y_t)) ) ^ ((|(X|X_t)) & (|(Y|Y_t)))
+        result = vast.Xor(left=and_part, right=and_part2)
+
+        return result
 
 
 class LorIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Xor:
+        X = self.operands[0]
+        Y = self.operands[1]
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        # (| (X & ~X_t))
+        unot_Xt = vast.Unot(right=X_t)
+        X_and_unot_Xt = vast.And(left=X, right=unot_Xt)
+        uor_X_and_unot_Xt = vast.Uor(right=X_and_unot_Xt)
+        # (| (Y & ~Y_t))
+        unot_Yt = vast.Unot(right=Y_t)
+        Y_and_unot_Yt = vast.And(left=Y, right=unot_Yt)
+        uor_Y_and_unot_Yt = vast.Uor(right=Y_and_unot_Yt)
+        # ((| (X & ~X_t )) | (| (Y & ~Y_t)))
+        left_or = vast.Or(left=uor_X_and_unot_Xt, right=uor_Y_and_unot_Yt)
+
+        # (| (X | X_t))
+        X_or_Xt = vast.Or(left=X, right=X_t)
+        uor_X_or_Xt = vast.Uor(right=X_or_Xt)
+        # (| (Y | Y_t))
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        uor_Y_or_Yt = vast.Uor(right=Y_or_Yt)
+        # ((| (X | X_t)) | (| (Y | Y_t)))
+        right_or = vast.Or(left=uor_X_or_Xt, right=uor_Y_or_Yt)
+
+        # O_t = ((| (X & ~X_t )) | (| (Y & ~Y_t))) ^ ((| (X | X_t)) | (| (Y | Y_t)))
+        result = vast.Xor(left=left_or, right=right_or)
+
+        return result
 
 
 # bitwise
@@ -200,39 +299,219 @@ class XnorIFT(OperatorIFT):
 
 # Relational
 class LtIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Xor:
+        X = self.operands[0]
+        Y = self.operands[1]
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        unot_Xt = vast.Unot(right=X_t)
+        X_and_unot_Xt = vast.And(left=X, right=unot_Xt)
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        expr1 = vast.LessThan(
+            left=X_and_unot_Xt, right=Y_or_Yt
+        )  # ( ((X & ~X_t)) < (Y | Y_t) )
+
+        X_or_Xt = vast.Or(left=X, right=X_t)
+        unot_Yt = vast.Unot(right=Y_t)
+        Y_and_unot_Yt = vast.And(left=Y, right=unot_Yt)
+        expr2 = vast.LessThan(
+            left=X_or_Xt, right=Y_and_unot_Yt
+        )  # ((X | X_t)) < (Y & ~Y_t)
+
+        restult = vast.Xor(left=expr1, right=expr2)
+        return restult
 
 
 class GtIFT(OperatorIFT):
-    pass
+
+    def gen_rule(self) -> vast.Xor:
+        X = self.operands[0]
+        Y = self.operands[1]
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        unot_Xt = vast.Unot(right=X_t)
+        X_and_unot_Xt = vast.And(left=X, right=unot_Xt)
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        expr1 = vast.GreaterThan(
+            left=X_and_unot_Xt, right=Y_or_Yt
+        )  # ( ((X & ~X_t)) > (Y | Y_t) )
+
+        X_or_Xt = vast.Or(left=X, right=X_t)
+        unot_Yt = vast.Unot(right=Y_t)
+        Y_and_unot_Yt = vast.And(left=Y, right=unot_Yt)
+        expr2 = vast.GreaterThan(
+            left=X_or_Xt, right=Y_and_unot_Yt
+        )  # ((X | X_t)) > (Y & ~Y_t)
+
+        result = vast.Xor(left=expr1, right=expr2)
+        return result
 
 
 class GeIFT(OperatorIFT):
-    pass
+
+    def gen_rule(self) -> vast.Xor:
+        X = self.operands[0]
+        Y = self.operands[1]
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        unot_Xt = vast.Unot(right=X_t)
+        X_and_unot_Xt = vast.And(left=X, right=unot_Xt)
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        expr1 = vast.GreaterEq(
+            left=X_and_unot_Xt, right=Y_or_Yt
+        )  # ( ((X & ~X_t)) >= (Y | Y_t) )
+
+        X_or_Xt = vast.Or(left=X, right=X_t)
+        unot_Yt = vast.Unot(right=Y_t)
+        Y_and_unot_Yt = vast.And(left=Y, right=unot_Yt)
+        expr2 = vast.GreaterEq(
+            left=X_or_Xt, right=Y_and_unot_Yt
+        )  # ((X | X_t)) >= (Y & ~Y_t)
+
+        result = vast.Xor(left=expr1, right=expr2)
+        return result
 
 
 class LeIFT(OperatorIFT):
-    pass
+
+    def gen_rule(self) -> vast.Xor:
+        X = self.operands[0]
+        Y = self.operands[1]
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        unot_Xt = vast.Unot(right=X_t)
+        X_and_unot_Xt = vast.And(left=X, right=unot_Xt)
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        expr1 = vast.LessEq(
+            left=X_and_unot_Xt, right=Y_or_Yt
+        )  # ( ( (X & ~X_t)) <= (Y | Y_t) )
+
+        X_or_Xt = vast.Or(left=X, right=X_t)
+        unot_Yt = vast.Unot(right=Y_t)
+        Y_and_unot_Yt = vast.And(left=Y, right=unot_Yt)
+        expr2 = vast.LessEq(
+            left=X_or_Xt, right=Y_and_unot_Yt
+        )  # ((X | X_t)) <= (Y & ~Y_t)
+
+        result = vast.Xor(left=expr1, right=expr2)
+
+        return result
 
 
 # Case Eq
 
 
 class EqlIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Xor:
+        X = self.operands[0]
+        Y = self.operands[1]
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        # (X & ~X_t)
+        unot_Xt = vast.Unot(right=X_t)
+        X_and_unot_Xt = vast.And(left=X, right=unot_Xt)
+        # (Y | Y_t)
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        # (X & ~X_t) === (Y | Y_t)
+        expr1 = vast.Eql(left=X_and_unot_Xt, right=Y_or_Yt)
+
+        # (X | X_t)
+        X_or_Xt = vast.Or(left=X, right=X_t)
+        # (Y & ~Y_t)
+        unot_Yt = vast.Unot(right=Y_t)
+        Y_and_unot_Yt = vast.And(left=Y, right=unot_Yt)
+        # (X | X_t) === (Y & ~Y_t)
+        expr2 = vast.Eql(left=X_or_Xt, right=Y_and_unot_Yt)
+
+        # O_t = expr1 ^ expr2
+        result = vast.Xor(left=expr1, right=expr2)
+        return result
 
 
 class NelIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Xor:
+        X = self.operands[0]
+        Y = self.operands[1]
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        unot_Xt = vast.Unot(right=X_t)
+        X_and_unot_Xt = vast.And(left=X, right=unot_Xt)
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        expr1 = vast.NotEq(
+            left=X_and_unot_Xt, right=Y_or_Yt
+        )  # ( (X & ~X_t) != (Y | Y_t) )
+
+        X_or_Xt = vast.Or(left=X, right=X_t)
+        unot_Yt = vast.Unot(right=Y_t)
+        Y_and_unot_Yt = vast.And(left=Y, right=unot_Yt)
+        expr2 = vast.NotEq(
+            left=X_or_Xt, right=Y_and_unot_Yt
+        )  # ((X | X_t)) != (Y & ~Y_t)
+
+        result = vast.Xor(left=expr1, right=expr2)
+        return result
 
 
 # Logical Eq
 class EqIFT(OperatorIFT):
-    pass
+
+    def gen_rule(self) -> vast.Xor:
+        X = self.operands[0]
+        Y = self.operands[1]
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        # (X & ~X_t)
+        unot_Xt = vast.Unot(right=X_t)
+        X_and_unot_Xt = vast.And(left=X, right=unot_Xt)
+        # (Y | Y_t)
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        # (X & ~X_t) === (Y | Y_t)
+        expr1 = vast.Eql(left=X_and_unot_Xt, right=Y_or_Yt)
+
+        # (X | X_t)
+        X_or_Xt = vast.Or(left=X, right=X_t)
+        # (Y & ~Y_t)
+        unot_Yt = vast.Unot(right=Y_t)
+        Y_and_unot_Yt = vast.And(left=Y, right=unot_Yt)
+        # (X | X_t) === (Y & ~Y_t)
+        expr2 = vast.Eql(left=X_or_Xt, right=Y_and_unot_Yt)
+
+        # O_t = expr1 ^ expr2
+        result = vast.Xor(left=expr1, right=expr2)
+        return result
 
 
 class NeIFT(OperatorIFT):
-    pass
+
+    def gen_rule(self) -> vast.Xor:
+        X = self.operands[0]
+        Y = self.operands[1]
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        unot_Xt = vast.Unot(right=X_t)
+        X_and_unot_Xt = vast.And(left=X, right=unot_Xt)
+        Y_or_Yt = vast.Or(left=Y, right=Y_t)
+        expr1 = vast.NotEq(
+            left=X_and_unot_Xt, right=Y_or_Yt
+        )  # ( (X & ~X_t) != (Y | Y_t) )
+
+        X_or_Xt = vast.Or(left=X, right=X_t)
+        unot_Yt = vast.Unot(right=Y_t)
+        Y_and_unot_Yt = vast.And(left=Y, right=unot_Yt)
+        expr2 = vast.NotEq(
+            left=X_or_Xt, right=Y_and_unot_Yt
+        )  # ((X | X_t)) != (Y & ~Y_t)
+
+        result = vast.Xor(left=expr1, right=expr2)
+        return result
 
 
 # Shift (impercise)
