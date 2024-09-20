@@ -85,7 +85,17 @@ class UplusIFT(OperatorIFT):
 
 class UminusIFT(OperatorIFT):
     def gen_rule(self) -> vast.Node:
-        return self.operands_tags[0]
+        X = 0
+        not_Xt = vast.Unot(self.operands_tags[X])
+        X_and_not_Xt = vast.And(self.operands[X], not_Xt)
+        neg1 = vast.Uminus(X_and_not_Xt)
+
+        X_or_Xt = vast.Or(self.operands[X], self.operands_tags[X])
+        neg2 = vast.Uminus(X_or_Xt)
+        
+        neg1_xor_neg2 = vast.Xor(neg1, neg2)
+        result = vast.Or(neg1_xor_neg2, self.operands_tags[X])
+        return result
 
 
 class PlusIFT(OperatorIFT):
