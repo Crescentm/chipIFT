@@ -1,0 +1,18 @@
+{
+    "top_module": "bitwiseand",
+    "input_signals": {
+        "x_t": 14,
+        "y_t": 15
+    },
+    "expected_output_signals": {
+        "o_t": 15
+    },
+    "sat_options": {
+        "set": {
+            "x_t": 14,
+            "y_t": 15
+        },
+        "show": ["o_t", "x_t", "y_t"],
+        "dump_json": "result.json"
+    }
+}
