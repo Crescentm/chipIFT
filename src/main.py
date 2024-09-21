@@ -105,4 +105,5 @@ def main():
         result_json_file=options.result_json,
     )
 
-main()
+if __name__ == "__main__":
+    main()
