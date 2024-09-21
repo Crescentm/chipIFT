@@ -14,7 +14,7 @@ YS_FILE = "a.ys"
 def generate_tmp_pathname() -> str:
     h = hashlib.sha256()
     h.update(str(time.time()).encode("utf-8"))
-    hashval = h.hexdigest()
+    hashval = h.hexdigest()[:10]
     return f"/tmp/tmp-{hashval}-chipift"
 
 
@@ -104,6 +104,5 @@ def main():
         verilog_file=tmp_code_path,
         result_json_file=options.result_json,
     )
-
 
 main()
