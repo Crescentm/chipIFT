@@ -23,7 +23,10 @@
   in
   {
     packages = {
-      chipift = mkPoetryApplication { projectDir = self; };
+      chipift = mkPoetryApplication {
+        projectDir = self;
+        python = pkgs.python312;
+      };
     };
     devShells.default = pkgs.mkShell {
       inputsFrom = [ self.packages.${system}.chipift ];
