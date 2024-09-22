@@ -1,18 +1,31 @@
 {
     "top_module": "bitwiseand",
-    "input_signals": {
-        "x_t": 14,
-        "y_t": 15
-    },
-    "expected_output_signals": {
-        "o_t": 15
-    },
-    "sat_options": {
-        "set": {
-            "x_t": 14,
-            "y_t": 15
+    "conditions": [
+        {
+            "name": "test_case_1",
+            "expected_output_signals": {
+                "o": "1111"
+            },
+            "sat_options": {
+                "set": {
+                    "x": "1110",
+                    "y": "1111"
+                },
+                "show": ["o", "x", "y"]
+            }
         },
-        "show": ["o_t", "x_t", "y_t"],
-        "dump_json": "result.json"
-    }
+        {
+            "name": "test_case_2",
+            "expected_output_signals": {
+                "o": "1000"
+            },
+            "sat_options": {
+                "set": {
+                    "x": "1010",
+                    "y": "1100"
+                },
+                "show": ["o", "x", "y"]
+            }
+        }
+    ]
 }

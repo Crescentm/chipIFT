@@ -4,11 +4,13 @@ from optparse import OptionParser
 import hashlib
 import time
 
+from src import run_yosys
 from src.ast_verilog import ASTVerilog
-from src.run_yosys import run_yosys
+from src.run_yosys import parse_config, run_yosys
 
 CODE_FILE = "code.v"
 YS_FILE = "a.ys"
+RESULT_FILE = "result.json"
 
 
 def generate_tmp_pathname() -> str:
@@ -56,10 +58,10 @@ def main():
     optparser.add_option(
         "-o",
         "--output",
-        dest="result_json",
+        dest="result_path",
         action="store",
-        default="./result.json",
-        help="result file",
+        default="./result",
+        help="result directory",
     )
     optparser.add_option(
         "-I",
@@ -86,10 +88,13 @@ def main():
     os.mkdir(tmp_path)
     tmp_code_path = f"{tmp_path}/{CODE_FILE}"
     tmp_ys_path = f"{tmp_path}/{YS_FILE}"
+    tmp_result_path = f"{tmp_path}/{RESULT_FILE}"
 
     for f in options.filelist:
         if not os.path.exists(f):
             raise IOError("file not found: " + f)
+
+    # check wether result path exists
 
     ast = ASTVerilog(options.filelist)
     for i in range(ast.module_num):
@@ -98,12 +103,16 @@ def main():
     with open(tmp_code_path, "w") as f:
         f.write(modified_code)
 
-    run_yosys(
-        run_ys_file=tmp_ys_path,
-        config_json_file=options.path_to_condition,
-        verilog_file=tmp_code_path,
-        result_json_file=options.result_json,
-    )
+    top_module, conditions = parse_config(options.path_to_condition)
+    for condition in conditions:
+        run_yosys(
+            run_ys_file=tmp_ys_path,
+            verilog_file=tmp_code_path,
+            result_json_file_temp=tmp_result_path,
+            top_module=top_module,
+            condition=condition,
+            result_folder=options.result_path
+        )
 
 if __name__ == "__main__":
     main()

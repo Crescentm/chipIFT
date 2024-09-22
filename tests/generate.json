@@ -1,18 +1,18 @@
 {
     "top_module": "adder_array",
-    "input_signals": {
-        "a_t": 7,
-        "b_t": 7
-    },
-    "expected_output_signals": {
-        "sum_t": 7
-    },
-    "sat_options": {
-        "set": {
-            "a_t": 7,
-            "b_t": 7
-        },
-        "show": ["sum_t", "a_t", "b_t"],
-        "dump_json": "result.json"
-    }
+    "conditions": [
+        {
+            "name": "confidentiality",
+            "expected_output_signals": {
+                "sum": "0000"
+            },
+            "sat_options": {
+                "set": {
+                    "a": "0100",
+                    "b": "0101"
+                },
+                "show": ["a", "b", "sum"]
+            }
+        }
+    ]
 }
