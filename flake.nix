@@ -27,6 +27,7 @@
         projectDir = self;
         python = pkgs.python312;
       };
+      default = self.packages.${system}.chipift;
     };
     devShells.default = pkgs.mkShell {
       inputsFrom = [ self.packages.${system}.chipift ];
@@ -38,6 +39,11 @@
 
     devShells.poetry = pkgs.mkShell {
       packages = [ pkgs.poetry ];
+    };
+    apps.${system}.default = {
+      type = "app";
+      # replace <script> with the name in the [tool.poetry.scripts] section of your pyproject.toml
+      program = "${self.packages.chipift}/bin/chipift";
     };
   });
 }
