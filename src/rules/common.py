@@ -54,10 +54,17 @@ class FlowTracker(object):
         return new_node
 
     def _do_replace_name(self, node: vast.Node, name_list: tuple) -> None:
-        if type(node) is vast.Identifier:
-            if node.name in name_list:
-
-                node.name = f"{node.name}_t"
+        match type(node):
+            case vast.Identifier:
+                if node.name in name_list:
+                    node.name = f"{node.name}_t"
+            case vast.Partselect:
+                self._do_replace_name(node.var, name_list)
+                return
+            case vast.Pointer:
+                self._do_replace_name(node.var, name_list)
+                return
+        # else
         children = node.children()
         if type(children) is tuple:
             for child in children:
