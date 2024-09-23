@@ -52,7 +52,7 @@ def run_yosys_sat(run_ys_file, verilog_file, result_json_file, top_module, condi
 
     ys_script.append("proc; opt; flatten")
 
-    sat_cmd = "sat"
+    sat_cmd = "sat -ignore_unknown_cells"
 
     sat_options = condition.get("sat_options", {})
 
