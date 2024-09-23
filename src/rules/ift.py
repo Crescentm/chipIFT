@@ -164,11 +164,21 @@ class DivideIFT(OperatorIFT):
 
 
 class ModIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Node:
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        result = vast.Or(left=X_t, right=Y_t)
+        return result
 
 
 class PowerIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Node:
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        result = vast.Or(left=X_t, right=Y_t)
+        return result
 
 
 # Logical
@@ -516,22 +526,49 @@ class NeIFT(OperatorIFT):
 
 # Shift (impercise)
 class LshiftaIFT(OperatorIFT):
+    def gen_rule(self) -> vast.Node:
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        result = vast.Or(left=X_t, right=Y_t)
+        return result
     pass
 
 
 class RshiftaIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Node:
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        result = vast.Or(left=X_t, right=Y_t)
+        return result
 
 
 class LshiftIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Node:
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        result = vast.Or(left=X_t, right=Y_t)
+        return result
 
 
 class RshiftIFT(OperatorIFT):
-    pass
+    def gen_rule(self) -> vast.Node:
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+
+        result = vast.Or(left=X_t, right=Y_t)
+        return result
 
 
-# ... cond, but let's forget that now.
+class CondIFT(OperatorIFT):
+    def gen_rule(self) -> vast.Node:
+        X_t = self.operands_tags[0]
+        Y_t = self.operands_tags[1]
+        Z_t = self.operands_tags[2]
+        Xt_or_Yt = vast.Or(X_t, Y_t)
+        return vast.Or(Xt_or_Yt, Z_t)
 
 rule_set = {
     # Reduction
@@ -578,4 +615,6 @@ rule_set = {
     vast.Sra: RshiftaIFT,
     vast.Sll: LshiftIFT,
     vast.Sra: RshiftIFT,
+    # cond
+    vast.Cond: CondIFT
 }
