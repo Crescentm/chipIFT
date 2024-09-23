@@ -1,0 +1,19 @@
+{
+    "top_module": "top",
+    "conditions": [
+        {
+            "name": "test_case_1",
+            "expected_output_signals": {
+                "o": "1"
+            },
+            "sat_options": {
+                "set": {
+                    "x": "1",
+                    "y": "1",
+                    "z": "1"
+                },
+                "show": ["o", "x", "z", "y"]
+            }
+        }
+    ]
+}

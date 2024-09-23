@@ -1,0 +1,18 @@
+{
+    "top_module": "adder_array",
+    "conditions": [
+        {
+            "name": "confidentiality",
+            "expected_output_signals": {
+                "sum": "0000"
+            },
+            "sat_options": {
+                "set": {
+                    "a": "0100",
+                    "b": "0101"
+                },
+                "show": ["a", "b", "sum"]
+            }
+        }
+    ]
+}
