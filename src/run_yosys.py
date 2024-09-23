@@ -4,12 +4,14 @@ import sys
 import os
 import shutil
 
+
 def parse_config(config_json_file):
     with open(config_json_file, "r") as f:
         config = json.load(f)
     top_module = config["top_module"]
     conditions = config["conditions"]
     return top_module, conditions
+
 
 def run_yosys_sat(run_ys_file, verilog_file, result_json_file, top_module, condition):
     ys_script = []
@@ -34,7 +36,6 @@ def run_yosys_sat(run_ys_file, verilog_file, result_json_file, top_module, condi
             sat_cmd += f" -show {signal}_t"
 
     sat_cmd += f" -dump_json {result_json_file}"
-
 
     ys_script.append(sat_cmd)
 
@@ -66,11 +67,12 @@ def run_yosys_sat(run_ys_file, verilog_file, result_json_file, top_module, condi
             else:
                 actual_signals[name] = None
 
-
         # 比较输出信号
         output_differences = {}
-        for signal, expected_value in condition.get("expected_output_signals", {}).items():
-            signal=signal+"_t"
+        for signal, expected_value in condition.get(
+            "expected_output_signals", {}
+        ).items():
+            signal = signal + "_t"
             actual_value = actual_signals.get(signal)
             if actual_value is not None:
                 differences = compare_bits(actual_value, expected_value)
@@ -89,6 +91,7 @@ def run_yosys_sat(run_ys_file, verilog_file, result_json_file, top_module, condi
     else:
         print(f"Result JSON file '{result_json_file}' not found.")
 
+
 def copy_result_json(result_json_file, output_dir, condition):
     if not os.path.exists(output_dir):
         try:
@@ -96,10 +99,11 @@ def copy_result_json(result_json_file, output_dir, condition):
         except OSError as e:
             print(f"无法创建输出目录 '{output_dir}'：{e}")
             sys.exit(1)
-    
+
     new_filename = f"{condition.get('name', 'Unnamed')}.json"
     destination = os.path.join(output_dir, new_filename)
     shutil.copyfile(result_json_file, destination)
+
 
 def compare_bits(actual_value, expected_value):
     differences = []
@@ -108,13 +112,28 @@ def compare_bits(actual_value, expected_value):
     expected_value = expected_value.zfill(max_len)
 
     for i in range(max_len):
-        bit_pos = max_len - i  
+        bit_pos = max_len - i
         actual_bit = actual_value[i]
         expected_bit = expected_value[i]
         if actual_bit != expected_bit:
-            differences.append(f"Bit {bit_pos}: Actual {actual_bit}, Expected {expected_bit}")
+            differences.append(
+                f"Bit {bit_pos}: Actual {actual_bit}, Expected {expected_bit}"
+            )
     return differences
 
+
+def run_yosys(
+    run_ys_file: str,
+    verilog_file: str,
+    result_json_file_temp: str,
+    top_module: str,
+    condition: list,
+    result_folder: str,
+):
+    run_yosys_sat(
+        run_ys_file, verilog_file, result_json_file_temp, top_module, condition
+    )
+    copy_result_json(result_json_file_temp, result_folder, condition)
 
 
 if __name__ == "__main__":
@@ -122,11 +141,12 @@ if __name__ == "__main__":
     config_json_file = "config.json"
     verilog_file = "And_t.v"
     result_json_file_temp = "result_temp.json"
-    result_folder="Result"
+    result_folder = "Result"
 
     top_module, conditions = parse_config(config_json_file)
 
     for condition in conditions:
-        run_yosys_sat(run_ys_file, verilog_file, result_json_file_temp, top_module, condition)
+        run_yosys_sat(
+            run_ys_file, verilog_file, result_json_file_temp, top_module, condition
+        )
         copy_result_json(result_json_file_temp, result_folder, condition)
-    
