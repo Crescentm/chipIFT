@@ -3,6 +3,36 @@ import subprocess
 import sys
 import os
 import shutil
+import re
+
+
+def parse_output(output):
+    lines = output.splitlines()
+    table_start = False
+    data = {}
+    for i, line in enumerate(lines):
+        if re.match(r"\s*Signal Name\s+Dec\s+Hex\s+Bin", line):
+            table_start = True
+            continue
+        if table_start:
+            if re.match(r"\s*-+", line):
+                continue
+            if line.strip() == "" or "Dumping SAT model" in line:
+                break
+            parts = re.split(r"\s{2,}", line.strip())
+            if len(parts) == 4:
+                signal_name, dec, hex_val, bin_val = parts
+                signal_name = signal_name.lstrip("\\")
+                data[signal_name] = {"Dec": dec, "Hex": hex_val, "Bin": bin_val}
+    return data
+
+
+def save_to_json(data, filename):
+    try:
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"保存 JSON 文件时出错: {e}")
 
 
 def parse_config(config_json_file):
@@ -31,11 +61,14 @@ def run_yosys_sat(run_ys_file, verilog_file, result_json_file, top_module, condi
             value_int = int(value, 2)  # 二进制字符串
             sat_cmd += f" -set {signal}_t {value_int}"
 
+    if "prove" in sat_options:
+        for signal, value in sat_options["prove"].items():
+            value_int = int(value, 2)  # 二进制字符串
+            sat_cmd += f" -prove {signal}_t {value_int}"
+
     if "show" in sat_options:
         for signal in sat_options["show"]:
             sat_cmd += f" -show {signal}_t"
-
-    sat_cmd += f" -dump_json {result_json_file}"
 
     ys_script.append(sat_cmd)
 
@@ -54,36 +87,41 @@ def run_yosys_sat(run_ys_file, verilog_file, result_json_file, top_module, condi
         print("Yosys 执行错误：", e.stderr)
         sys.exit(1)
 
+    output = result.stdout
+    data = parse_output(output)
+    save_to_json(data, result_json_file)
+
     if os.path.exists(result_json_file):
         with open(result_json_file, "r") as f:
             result_json = json.load(f)
 
         actual_signals = {}
-        for signal in result_json["signal"]:
-            name = signal["name"]
-            if "data" in signal and signal["data"]:
-                value = signal["data"][0]
-                actual_signals[name] = value
+        for signal, values in result_json.items():
+            if isinstance(values, dict):
+                bin_value = values.get("Bin")
+                actual_signals[signal] = bin_value
             else:
-                actual_signals[name] = None
+                actual_signals[signal] = None
 
         # 比较输出信号
         output_differences = {}
-        for signal, expected_value in condition.get(
+        for signal, expected_value_bin in condition.get(
             "expected_output_signals", {}
         ).items():
-            signal = signal + "_t"
+            signal += "_t"
             actual_value = actual_signals.get(signal)
             if actual_value is not None:
-                differences = compare_bits(actual_value, expected_value)
+                differences = compare_bits(actual_value, expected_value_bin)
                 if differences:
                     output_differences[signal] = differences
+            else:
+                output_differences[signal] = ["信号未在结果中找到。"]
 
         # 输出差异报告
         if output_differences:
             print(f"Condition '{condition.get('name', 'Unnamed')}' Failed:")
             for signal, diffs in output_differences.items():
-                print(f"Output Signal {signal}:")
+                print(f"  Output Signal '{signal}':")
                 for diff in diffs:
                     print(f"  {diff}")
         else:
@@ -137,9 +175,9 @@ def run_yosys(
 
 
 if __name__ == "__main__":
-    run_ys_file = "run.ys"
-    config_json_file = "config.json"
-    verilog_file = "And_t.v"
+    run_ys_file = "a.ys"
+    config_json_file = "c2670.json"
+    verilog_file = "code.v"
     result_json_file_temp = "result_temp.json"
     result_folder = "Result"
 

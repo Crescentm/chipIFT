@@ -45,7 +45,6 @@ class DFGVerilog:
         self.terms: dict[vscope.ScopeChain, vdfg.Term] = analyzer.getTerms()
         self.binddict: dict[vscope.ScopeChain, list[vdfg.Bind]] = analyzer.getBinddict()
         self.constlist = analyzer.getConsts()
-
         self.topmodule = topmodule
 
     def gen_code(
@@ -93,7 +92,11 @@ class DFGVerilog:
 class ASTVerilog:
 
     def __init__(
-        self, file_list, include_list: list = [], define_list: list = []
+        self,
+        file_list,
+        include_list: list = [],
+        define_list: list = [],
+        topmodule: str = "top",
     ) -> None:
         file_exists(file_list)
 
@@ -104,11 +107,31 @@ class ASTVerilog:
             debug=False,
         )
 
+        dfg = DFGVerilog(
+            file_list,
+            topmodule=topmodule,
+            include_list=include_list,
+            define_list=define_list,
+        )
+
         self.file_list = file_list
+        self.include_list = include_list
+        self.define_list = define_list
         self.parser = ast
         self.source: vast.Source = ast
         self.module_num = len(ast.children()[0].children())
         self.module_name_list = [module.name for module in ast.description.definitions]
+
+        self.terms_list = dfg.gen_taint_vars()
+
+        term_dict = {}
+        for term in self.terms_list:
+            if term_dict.get(term[1]) == None:
+                term_dict[term[1]] = [term[0]]
+            else:
+                term_dict[term[1]].append(term[0])
+
+        self.term_dict = term_dict
 
     def show(self):
         self.parser.show()
@@ -121,9 +144,7 @@ class ASTVerilog:
     def traverse_modify_ast(self, module_index: int = 0):
         module: vast.ModuleDef = self.source.description.definitions[module_index]
         module_list = list(self.source.description.definitions)
-        dfg = DFGVerilog(self.file_list, topmodule=module.name)
-        terms_list = dfg.gen_taint_vars()
-        flow_tracker = FlowTracker(term_list=terms_list)
+        flow_tracker = FlowTracker(term_list=self.terms_list)
 
         def traverse(node):
             # node may be a tuple or a single node
@@ -161,6 +182,27 @@ class ASTVerilog:
                         children_new.append(child)
                         ret = flow_tracker.track_flow(child, module.name)
                         children_new.append(ret)
+                    case vast.Instance:
+                        new_ports = []
+                        for port in child.portlist:
+                            if isinstance(port, vast.PortArg) and isinstance(
+                                port.argname, vast.Identifier
+                            ):
+                                taint_port = copy.deepcopy(port)
+                                taint_port.argname = vast.Identifier(
+                                    f"{port.argname.name}_t"
+                                )
+                                taint_port.portname = f"{port.portname}_t"
+                                new_ports.append(port)
+                                new_ports.append(taint_port)
+                            else:
+                                new_ports.append(port)
+
+                        children_new.append(
+                            vast.Instance(
+                                child.module, child.name, new_ports, child.parameterlist
+                            )
+                        )
                     case (
                         vast.Constant
                         | vast.IntConst
@@ -189,6 +231,7 @@ class ASTVerilog:
                         | vast.ForStatement
                         | vast.Partselect
                         | vast.Repeat
+                        | vast.InstanceList
                     ):
                         params = [
                             param
