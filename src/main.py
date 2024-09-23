@@ -6,11 +6,22 @@ import time
 
 from src import run_yosys
 from src.ast_verilog import ASTVerilog
+
 from src.run_yosys import parse_config, run_yosys
 
 CODE_FILE = "code.v"
 YS_FILE = "a.ys"
 RESULT_FILE = "result.json"
+MODULE_LIST = [
+    "c2670",
+    "c3540",
+    "c5315",
+    "c6288",
+    "s1423",
+    "s13207",
+    "s15850",
+    "s35932",
+]
 
 
 def generate_tmp_pathname() -> str:
@@ -96,14 +107,19 @@ def main():
 
     # check wether result path exists
 
-    ast = ASTVerilog(options.filelist)
+    top_module, conditions = parse_config(options.path_to_condition)
+    ast = ASTVerilog(
+        options.filelist,
+        include_list=options.include,
+        topmodule=top_module,
+    )
+
     for i in range(ast.module_num):
         ast.traverse_modify_ast(module_index=i)
     modified_code = ast.gen_code()
     with open(tmp_code_path, "w") as f:
         f.write(modified_code)
 
-    top_module, conditions = parse_config(options.path_to_condition)
     for condition in conditions:
         run_yosys(
             run_ys_file=tmp_ys_path,
@@ -111,8 +127,9 @@ def main():
             result_json_file_temp=tmp_result_path,
             top_module=top_module,
             condition=condition,
-            result_folder=options.result_path
+            result_folder=options.result_path,
         )
+
 
 if __name__ == "__main__":
     main()
