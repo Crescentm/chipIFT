@@ -33,11 +33,10 @@ class FlowTracker(object):
             lval = node.left
             rval = node.right
         else:
-            raise TypeError  # XXX
+            raise TypeError
 
         ltag = self._replace_name(lval, name_list)
-        # TODO: check wether lval is in conditions
-        rtag = self._track_rval(rval, name_list, False)  # TODO: change me later
+        rtag = self._track_rval(rval, name_list, False)
 
         match type(node):
             case vast.Assign:
@@ -127,4 +126,4 @@ class FlowTracker(object):
         return new_node
 
     def _implicit_ift(self) -> vast.Node:
-        return vast.IntConst(value="0")  # TODO: change me later
+        return vast.IntConst(value="0")

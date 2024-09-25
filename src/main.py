@@ -85,7 +85,6 @@ def main():
     optparser.add_option(
         "-D", dest="define", action="append", default=[], help="Macro Definition"
     )
-    # TODO: add -D and -I to ast ganerate
     (options, _) = optparser.parse_args()
 
     if options.showversion:

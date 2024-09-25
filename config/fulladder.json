@@ -1,0 +1,20 @@
+{
+    "top_module": "full_adder",
+    "conditions": [
+        {
+            "name": "confidentiality",
+            "expected_output_signals": {
+                "Sum": "0",
+                "Cout": "0"
+            },
+            "sat_options": {
+                "set": {
+                    "A": "0",
+                    "B": "1",
+                    "Cin": "0"
+                },
+                "show": ["A", "B", "Cin", "Sum", "Cout"]
+            }
+        }
+    ]
+}
