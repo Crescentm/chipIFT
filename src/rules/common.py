@@ -1,13 +1,11 @@
 import pyverilog.vparser.ast as vast
 import src.rules.ift as ift
 import copy
+from src.preprocessor import TaintVar
 
+# TODO: proper exception?
 
-"""
-Generate IFT snippet
-"""
-
-
+# Generate IFT snippet
 class FlowTracker(object):
     assignment_operator = (
         vast.Assign,
@@ -15,16 +13,12 @@ class FlowTracker(object):
         vast.BlockingSubstitution,
     )
 
-    def __init__(self, term_list: list, conditions: list = []) -> None:
+    def __init__(self, term_list: list[TaintVar]) -> None:
         self.term_list = term_list
-        self.conditions = conditions
 
-    """
-    process generate
-    """
-
-    def track_flow(self, node: vast.Node, module_name: str) -> vast.Node:
-        name_list = tuple(_[0] for _ in self.term_list if _[1] == module_name)
+    # process the generation
+    def track_flow(self, node: vast.Node, module_name: str, conditions: list = []) -> vast.Node:
+        names = {_.var_name: _.value for _ in self.term_list if _.module_type == module_name}
         assert type(node) in self.assignment_operator
         if type(node) is vast.Assign:
             lval = node.left
@@ -35,8 +29,9 @@ class FlowTracker(object):
         else:
             raise TypeError
 
-        ltag = self._replace_name(lval, name_list)
-        rtag = self._track_rval(rval, name_list, False)
+        ltag = self._replace_name(lval, names)  # track lvalue 
+        lwidth = self._calculate_width(lval, names)
+        rtag = self._track_rval(rval, lwidth, names, conditions)  # track rval
 
         match type(node):
             case vast.Assign:
@@ -47,68 +42,119 @@ class FlowTracker(object):
                 new_node = vast.BlockingSubstitution(left=ltag, right=rtag)
         return new_node
 
-    def _replace_name(self, node: vast.Lvalue, name_list: tuple) -> vast.Lvalue:
+
+    def _calculate_width(self, node: vast.Lvalue, names: dict) -> vast.IntConst:
+        lvalue_var = node.var
+        match type(lvalue_var):
+            case vast.Identifier:
+                id_name = lvalue_var.name
+                id_variable: vast.Variable = names[id_name]
+                id_width = id_variable.width
+                if id_width is not None:
+                    width = str(int(id_width.msb.value) - int(id_width.lsb.value))
+                    return vast.IntConst(width)
+                else:
+                    return vast.IntConst("1")
+            case vast.Partselect:
+                # TODO: dimensions
+                if isinstance(lvalue_var.msb, vast.Constant) and isinstance(lvalue_var.lsb, vast.Constant):
+                    width = str(int(lvalue_var.msb.value) - int(lvalue_var.lsb.value))
+                    return vast.IntConst(width)
+                else:
+                    var_id: vast.Identifier = lvalue_var.var
+                    var_name: str = var_id.name
+                    var_variable: vast.Variable = names[var_name]
+                    var_width = var_variable.width
+                    if var_width is not None:
+                        width = str(int(var_width.msb.value) - int(var_width.lsb.value))
+                        return vast.IntConst(width)
+                    else:
+                        return vast.IntConst("1")
+            case vast.Pointer:
+                var_name: str = lvalue_var.var.name
+                var_variable: vast.Variable = names[var_name]
+                var_dimensions = var_variable.dimensions
+                var_width = var_variable.width
+                if (var_dimensions is not None) and (var_width is not None):
+                    width = str(int(var_width.msb.value) - int(var_width.lsb.value))
+                    return vast.IntConst(width)
+                else:
+                    return vast.IntConst("1")
+            case _:
+                print("invalid node type in Lvalue?")
+                raise TypeError
+
+    # track lvalue, generate the proper tag of lvalue
+    def _replace_name(self, node: vast.Lvalue, names: dict) -> vast.Lvalue:
         new_node = copy.deepcopy(node)
-        self._do_replace_name(new_node, name_list)
+        self._do_replace_name(new_node, names)
         return new_node
 
-    def _do_replace_name(self, node: vast.Node, name_list: tuple) -> None:
+    def _do_replace_name(self, node: vast.Node, names: dict) -> None:
         match type(node):
             case vast.Identifier:
-                if node.name in name_list:
+                if node.name in names:
                     node.name = f"{node.name}_t"
             case vast.Partselect:
-                self._do_replace_name(node.var, name_list)
+                self._do_replace_name(node.var, names)
                 return
             case vast.Pointer:
-                self._do_replace_name(node.var, name_list)
+                self._do_replace_name(node.var, names)
                 return
-        # else
+            # If the type is not matched, it means that the node does not need to be replaced or is not a leaf node.
         children = node.children()
         if type(children) is tuple:
             for child in children:
-                self._do_replace_name(child, name_list)
+                self._do_replace_name(child, names)
 
+    # traverse rvalue of the expression, generate tracking rules
+    # TODO: width of lval
+    #       1. repeat of those single bit operation(?)
+    #       2. implicit ift
     def _track_rval(
-        self, node: vast.Rvalue, name_list: tuple, have_imp=False
+            self, node: vast.Rvalue, lwidth: vast.IntConst, names: dict, conditions: list = []
     ) -> vast.Rvalue:
-        exp_ift = self._traverse_subtree(node.var, name_list)
-        if have_imp:
-            imp_ift = self._implicit_ift()
+        exp_ift = self._explicit_ift(node.var, lwidth, names)
+        if conditions:
+            imp_ift = self._implicit_ift(conditions, lwidth, names)
             new_var = vast.Or(left=exp_ift, right=imp_ift)
         else:
             new_var = exp_ift
         new_node = vast.Rvalue(var=new_var)
         return new_node
 
-    def _traverse_subtree(
+    # generate a tracking rule from a expression(sub-syntax-tree)
+    # TODO: deal with width
+    def _generate_rule(
         self,
         node: vast.Node,
-        name_list: tuple,
+        lwidth: vast.IntConst,
+        names: dict,
     ) -> vast.Node:
 
         children = node.children()
         children_tags = []
-        if type(children) is tuple:
+        if isinstance(children, tuple):  # XXX: better solution?
             for child in children:
-                child_tag = self._traverse_subtree(
+                child_tag = self._generate_rule(
                     child,
-                    name_list,
+                    lwidth,
+                    names,
                 )
                 children_tags.append(child_tag)
 
-        if isinstance(node, vast.Operator):
+        if isinstance(node, vast.Operator):  # Operators
             if type(node) in ift.rule_set:
                 op_ift = ift.rule_set[type(node)]
-                new_node = op_ift(children, children_tags).gen_rule()
+                new_node = op_ift(children, children_tags, lwidth).gen_rule()
             else:
-                new_node = ift.OperatorIFT().gen_rule()
-        elif isinstance(node, vast.Constant):
+                new_node = ift.DefaultIFT().gen_rule()
+        elif isinstance(node, vast.Constant):  # Consts
             new_node = type(node)(value="0")
         else:
             match type(node):
                 case vast.Identifier:
-                    if node.name in name_list:
+                    if node.name in names:
                         new_node = vast.Identifier(name=f"{node.name}_t")
                     else:
                         new_node = copy.deepcopy(node)
@@ -125,5 +171,13 @@ class FlowTracker(object):
                     new_node = vast.Node()
         return new_node
 
-    def _implicit_ift(self) -> vast.Node:
+    def _explicit_ift(
+        self,
+        node: vast.Node,
+        lwidth: vast.IntConst,
+        names: dict,
+    ) -> vast.Node:
+        return self._generate_rule(node, lwidth, names)
+
+    def _implicit_ift(self, conditions: list, lwidth: vast.IntConst, names: dict) -> vast.Node:
         return vast.IntConst(value="0")

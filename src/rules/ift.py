@@ -1,16 +1,22 @@
-from sre_compile import OPCODES
-from pyverilog.ast_code_generator.codegen import Operator, Uplus
 import pyverilog.vparser.ast as vast
-
+from abc import ABC, abstractmethod
 
 # base
-class OperatorIFT(object):
-    def __init__(self, operands: list = [], operands_tags: list = []) -> None:
+class OperatorIFT(ABC):
+    def __init__(
+        self, operands: list = [], operands_tags: list = [], lwidth: vast.IntConst = vast.IntConst("-1")
+    ) -> None:
+        self.lwidth = lwidth
         self.operands = operands
         self.operands_tags = operands_tags
 
+    @abstractmethod
     def gen_rule(self) -> vast.Node:
-        # print("rule not implemented yet...")
+        raise NotImplementedError
+
+
+class DefaultIFT(OperatorIFT):
+    def gen_rule(self) -> vast.Node:
         return vast.IntConst(value="0")
 
 
@@ -23,18 +29,20 @@ class UandIFT(OperatorIFT):
         Y_or_Yt = vast.Or(left=Y, right=Y_t)
         uand_Y_or_Yt = vast.Uand(right=Y_or_Yt)
         result = vast.And(left=uor_Yt, right=uand_Y_or_Yt)
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 class UnandIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Operator:
+    def gen_rule(self) -> vast.Node:
         Y = 0
         Y_t = self.operands_tags[Y]
         uor_Yt = vast.Uor(right=Y_t)
         Y_or_Yt = vast.Or(left=Y, right=Y_t)
         uand_Y_or_Yt = vast.Uand(right=Y_or_Yt)
         result = vast.And(left=uor_Yt, right=uand_Y_or_Yt)
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 class UorIFT(OperatorIFT):
@@ -46,7 +54,8 @@ class UorIFT(OperatorIFT):
         not_Y_or_Yt = vast.Or(left=not_Y, right=Y_t)
         uand_not_Y_or_Yt = vast.Uand(right=not_Y_or_Yt)
         result = vast.And(left=uor_Yt, right=uand_not_Y_or_Yt)
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 class UnorIFT(OperatorIFT):
@@ -58,7 +67,8 @@ class UnorIFT(OperatorIFT):
         not_Y_or_Yt = vast.Or(left=not_Y, right=Y_t)
         uand_not_Y_or_Yt = vast.Uand(right=not_Y_or_Yt)
         result = vast.And(left=uor_Yt, right=uand_not_Y_or_Yt)
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 class UxorIFT(OperatorIFT):
@@ -66,7 +76,8 @@ class UxorIFT(OperatorIFT):
         Y_t = self.operands_tags[0]
         uor_Yt = vast.Uor(right=Y_t)
         result = uor_Yt
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 class UxnorIFT(OperatorIFT):
@@ -74,7 +85,8 @@ class UxnorIFT(OperatorIFT):
         Y_t = self.operands_tags[0]
         uor_Yt = vast.Uor(right=Y_t)
         result = uor_Yt
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 # Arithmetic
@@ -183,18 +195,20 @@ class PowerIFT(OperatorIFT):
 
 # Logical
 class LnotIFT(OperatorIFT):
-    def gen_rule(self) -> vast.And:
+    def gen_rule(self) -> vast.Node:
         Y = self.operands[0]
         Y_t = self.operands_tags[0]
         not_Yt = vast.Unot(right=Y_t)
         Y_and_not_Yt = vast.And(left=Y, right=not_Yt)
         lnot_Y_and_not_Yt = vast.Ulnot(right=Y_and_not_Yt)
         uor_Yt = vast.Uor(right=Y_t)
-        return vast.And(left=lnot_Y_and_not_Yt, right=uor_Yt)
+        result = vast.And(left=lnot_Y_and_not_Yt, right=uor_Yt)
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 class LandIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Xor:
+    def gen_rule(self) -> vast.Node:
         X = self.operands[0]
         Y = self.operands[1]
         X_t = self.operands_tags[0]
@@ -222,12 +236,12 @@ class LandIFT(OperatorIFT):
 
         # O_t = ( (|(X & ~X_t)) & (|(Y & ~Y_t)) ) ^ ((|(X|X_t)) & (|(Y|Y_t)))
         result = vast.Xor(left=and_part, right=and_part2)
-
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 class LorIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Xor:
+    def gen_rule(self) -> vast.Node:
         X = self.operands[0]
         Y = self.operands[1]
         X_t = self.operands_tags[0]
@@ -256,7 +270,8 @@ class LorIFT(OperatorIFT):
         # O_t = ((| (X & ~X_t )) | (| (Y & ~Y_t))) ^ ((| (X | X_t)) | (| (Y | Y_t)))
         result = vast.Xor(left=left_or, right=right_or)
 
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 # bitwise
@@ -309,7 +324,7 @@ class XnorIFT(OperatorIFT):
 
 # Relational
 class LtIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Xor:
+    def gen_rule(self) -> vast.Node:
         X = self.operands[0]
         Y = self.operands[1]
         X_t = self.operands_tags[0]
@@ -329,13 +344,14 @@ class LtIFT(OperatorIFT):
             left=X_or_Xt, right=Y_and_unot_Yt
         )  # ((X | X_t)) < (Y & ~Y_t)
 
-        restult = vast.Xor(left=expr1, right=expr2)
-        return restult
+        result = vast.Xor(left=expr1, right=expr2)
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 class GtIFT(OperatorIFT):
 
-    def gen_rule(self) -> vast.Xor:
+    def gen_rule(self) -> vast.Node:
         X = self.operands[0]
         Y = self.operands[1]
         X_t = self.operands_tags[0]
@@ -356,12 +372,13 @@ class GtIFT(OperatorIFT):
         )  # ((X | X_t)) > (Y & ~Y_t)
 
         result = vast.Xor(left=expr1, right=expr2)
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 class GeIFT(OperatorIFT):
 
-    def gen_rule(self) -> vast.Xor:
+    def gen_rule(self) -> vast.Node:
         X = self.operands[0]
         Y = self.operands[1]
         X_t = self.operands_tags[0]
@@ -382,12 +399,13 @@ class GeIFT(OperatorIFT):
         )  # ((X | X_t)) >= (Y & ~Y_t)
 
         result = vast.Xor(left=expr1, right=expr2)
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 class LeIFT(OperatorIFT):
 
-    def gen_rule(self) -> vast.Xor:
+    def gen_rule(self) -> vast.Node:
         X = self.operands[0]
         Y = self.operands[1]
         X_t = self.operands_tags[0]
@@ -408,15 +426,15 @@ class LeIFT(OperatorIFT):
         )  # ((X | X_t)) <= (Y & ~Y_t)
 
         result = vast.Xor(left=expr1, right=expr2)
-
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 # Case Eq
 
 
 class EqlIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Xor:
+    def gen_rule(self) -> vast.Node:
         X = self.operands[0]
         Y = self.operands[1]
         X_t = self.operands_tags[0]
@@ -440,11 +458,12 @@ class EqlIFT(OperatorIFT):
 
         # O_t = expr1 ^ expr2
         result = vast.Xor(left=expr1, right=expr2)
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 class NelIFT(OperatorIFT):
-    def gen_rule(self) -> vast.Xor:
+    def gen_rule(self) -> vast.Node:
         X = self.operands[0]
         Y = self.operands[1]
         X_t = self.operands_tags[0]
@@ -465,13 +484,14 @@ class NelIFT(OperatorIFT):
         )  # ((X | X_t)) != (Y & ~Y_t)
 
         result = vast.Xor(left=expr1, right=expr2)
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 # Logical Eq
 class EqIFT(OperatorIFT):
 
-    def gen_rule(self) -> vast.Xor:
+    def gen_rule(self) -> vast.Node:
         X = self.operands[0]
         Y = self.operands[1]
         X_t = self.operands_tags[0]
@@ -495,12 +515,13 @@ class EqIFT(OperatorIFT):
 
         # O_t = expr1 ^ expr2
         result = vast.Xor(left=expr1, right=expr2)
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 class NeIFT(OperatorIFT):
 
-    def gen_rule(self) -> vast.Xor:
+    def gen_rule(self) -> vast.Node:
         X = self.operands[0]
         Y = self.operands[1]
         X_t = self.operands_tags[0]
@@ -521,7 +542,8 @@ class NeIFT(OperatorIFT):
         )  # ((X | X_t)) != (Y & ~Y_t)
 
         result = vast.Xor(left=expr1, right=expr2)
-        return result
+        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
+        return result_ext
 
 
 # Shift (impercise)
@@ -532,7 +554,6 @@ class LshiftaIFT(OperatorIFT):
 
         result = vast.Or(left=X_t, right=Y_t)
         return result
-    pass
 
 
 class RshiftaIFT(OperatorIFT):
@@ -569,6 +590,7 @@ class CondIFT(OperatorIFT):
         Z_t = self.operands_tags[2]
         Xt_or_Yt = vast.Or(X_t, Y_t)
         return vast.Or(Xt_or_Yt, Z_t)
+
 
 rule_set = {
     # Reduction
@@ -616,5 +638,5 @@ rule_set = {
     vast.Sll: LshiftIFT,
     vast.Sra: RshiftIFT,
     # cond
-    vast.Cond: CondIFT
+    vast.Cond: CondIFT,
 }
