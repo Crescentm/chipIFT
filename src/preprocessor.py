@@ -66,38 +66,24 @@ class Preprocessor:
                     self._traverse_node(child.true_statement)
                     self._traverse_node(child.false_statement)
                     self._current_conditions.pop()
-                case vast.CaseStatement:
+                case vast.CaseStatement | vast.CasexStatement | vast.CasezStatement:
                     all_case_cond = []
                     for case in child.caselist:
                         if case.cond is None:
                             if all_case_cond:
-                                cond_node = reduce(vast.Land, all_case_cond)
-                                self._current_conditions.append(cond_node)
+                                self._current_conditions.extend(all_case_cond)
                                 self._traverse_node(case.statement)
-                                self._current_conditions.pop()
+                                for _ in range(len(all_case_cond)):
+                                    self._current_conditions.pop()
                         else:
                             self._current_conditions.append(
-                                vast.Eql(child.comp, case.cond[0])
+                                vast.Xor(child.comp, vast.Unot(case.cond[0]))
                             )
                             self._traverse_node(case.statement)
                             self._current_conditions.pop()
-                            all_case_cond.append(vast.NotEql(child.comp, case.cond[0]))
-                case vast.CasexStatement | vast.CasezStatement:
-                    all_case_cond = []
-                    for case in child.caselist:
-                        if case.cond is None:
-                            if all_case_cond:
-                                cond_node = reduce(vast.Land, all_case_cond)
-                                self._current_conditions.append(cond_node)
-                                self._traverse_node(case.statement)
-                                self._current_conditions.pop()
-                        else:
-                            self._current_conditions.append(
-                                vast.Eq(child.comp, case.cond[0])
+                            all_case_cond.append(
+                                vast.Xnor(vast.Unot(child.comp), case.cond[0])
                             )
-                            self._traverse_node(case.statement)
-                            self._current_conditions.pop()
-                            all_case_cond.append(vast.NotEq(child.comp, case.cond[0]))
                 case (
                     vast.Variable
                     | vast.Port
