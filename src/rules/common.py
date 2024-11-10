@@ -181,20 +181,20 @@ class FlowTracker(object):
 
     def _implicit_ift(self, conditions: list[vast.Node], lwidth: vast.IntConst, names: dict) -> vast.Node:
         # XXX: relatively impercise one:
-        condition_tags = []
-        for condition in conditions:
-            compressed_condition = vast.Uor(condition)
-            condition_tag = self._generate_rule(compressed_condition, lwidth, names)
-            condition_tags.append(condition_tag)
-        result = condition_tags[0]
-        for condition_tag in condition_tags[1:]:
-            result = vast.Or(result, condition_tag)
+        # condition_tags = []
+        # for condition in conditions:
+        #     compressed_condition = vast.Uor(condition)
+        #     condition_tag = self._generate_rule(compressed_condition, lwidth, names)
+        #     condition_tags.append(condition_tag)
+        # result = condition_tags[0]
+        # for condition_tag in condition_tags[1:]:
+        #     result = vast.Or(result, condition_tag)
         
         # relatively percise one:
-        # compressed_condition_0 = vast.Uor(conditions[0])
-        # condition_final = compressed_condition_0
-        # for condition in conditions[1:]:
-        #     compressed_condition = vast.Uor(condition)
-        #     condition_final = vast.And(condition_final, compressed_condition)
-        # result = self._generate_rule(condition_final, lwidth, names)
+        compressed_condition_0 = vast.Uor(conditions[0])
+        condition_final = compressed_condition_0
+        for condition in conditions[1:]:
+            compressed_condition = vast.Uor(condition)
+            condition_final = vast.And(condition_final, compressed_condition)
+        result = self._generate_rule(condition_final, lwidth, names)
         return result
