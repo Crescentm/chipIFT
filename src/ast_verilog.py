@@ -1,92 +1,12 @@
 from src.utils import *
 from src.rules.common import *
 from pyverilog.vparser.parser import parse
-from pyverilog.dataflow.dataflow_analyzer import VerilogDataflowAnalyzer
 from pyverilog.ast_code_generator.codegen import ASTCodeGenerator
-from pyverilog.dataflow.dataflow_codegen import VerilogCodeGenerator
-from pyverilog.dataflow.optimizer import VerilogDataflowOptimizer
-import pyverilog.dataflow.dataflow as vdfg
-import pyverilog.utils.scope as vscope
+from src.dfg_verilog import DFGVerilog
+from src.preprocess import Preprocess
 import pyverilog.vparser.ast as vast
 import inspect
 import copy
-
-
-class CFGVerilog:
-
-    def __init__(
-        self,
-        file_list: list,
-        topmodule: str = "top",
-        include_list=[],
-        define_list=[],
-    ) -> None:
-        pass
-
-
-class DFGVerilog:
-
-    def __init__(
-        self,
-        file_list: list,
-        topmodule: str = "top",
-        noreorder=False,
-        nobind=False,
-        include_list=[],
-        define_list=[],
-    ):
-        file_exists(file_list)
-        analyzer = VerilogDataflowAnalyzer(
-            file_list, topmodule, noreorder, nobind, include_list, define_list
-        )
-        analyzer.generate()
-        self.directives: tuple = analyzer.get_directives()
-        self.instances: tuple = analyzer.getInstances()
-        self.terms: dict[vscope.ScopeChain, vdfg.Term] = analyzer.getTerms()
-        self.binddict: dict[vscope.ScopeChain, list[vdfg.Bind]] = analyzer.getBinddict()
-        self.constlist = analyzer.getConsts()
-        self.topmodule = topmodule
-
-    def gen_code(
-        self,
-        clockname: str = "CLK",
-        resetname: str = "RST_X",
-        clockedge: str = "posedge",
-        resetedge: str = "negedge",
-        searchtarget=[],
-    ):
-        """
-        DO NOT USE THIS !\n
-        Need to solve: module 'pyverilog.utils.signaltype' has no attribute 'isWireArray'
-        """
-        optimizer = VerilogDataflowOptimizer(self.terms, self.binddict)
-        optimizer.resolveConstant()
-        resolved_terms = optimizer.getResolvedTerms()
-        resolved_binddict = optimizer.getResolvedBinddict()
-        constlist = optimizer.getConstlist()
-        codegen = VerilogCodeGenerator(
-            self.topmodule,
-            self.terms,
-            self.binddict,
-            resolved_terms,
-            resolved_binddict,
-            constlist,
-        )
-        codegen.set_clock_info(clockname, clockedge)
-        codegen.set_reset_info(resetname, resetedge)
-        code = codegen.generateCode()
-        return code
-
-    def gen_taint_vars(self):
-        taint_var = []
-        instance_dict = dict(self.instances)
-        for value in self.terms.values():
-            var_name = str(value.name[-1:])
-            module_type = instance_dict[value.name[:-1]]
-            var_type = tuple(value.termtype)
-            taint_var.append((var_name, module_type, value))
-
-        return taint_var
 
 
 class ASTVerilog:
@@ -114,6 +34,14 @@ class ASTVerilog:
             define_list=define_list,
         )
 
+        preprocess = Preprocess(
+            ast,
+            [module.name for module in ast.description.definitions],
+            dfg.gen_taint_vars(),
+        )
+        preprocess.traverse()
+
+        self.terms_list = preprocess.term_list
         self.file_list = file_list
         self.include_list = include_list
         self.define_list = define_list
@@ -121,17 +49,14 @@ class ASTVerilog:
         self.source: vast.Source = ast
         self.module_num = len(ast.children()[0].children())
         self.module_name_list = [module.name for module in ast.description.definitions]
+        # term_dict = {}
+        # for term in self.terms_list:
+        #     if term_dict.get(term[1]) == None:
+        #         term_dict[term[1]] = [term[0]]
+        #     else:
+        #         term_dict[term[1]].append(term[0])
 
-        self.terms_list = dfg.gen_taint_vars()
-
-        term_dict = {}
-        for term in self.terms_list:
-            if term_dict.get(term[1]) == None:
-                term_dict[term[1]] = [term[0]]
-            else:
-                term_dict[term[1]].append(term[0])
-
-        self.term_dict = term_dict
+        # self.term_dict = term_dict
 
     def show(self):
         self.parser.show()
@@ -170,12 +95,9 @@ class ASTVerilog:
                         taint_var: vast.Reg = copy.deepcopy(child)
                         taint_var.name = f"{taint_var.name}_t"
                         children_new.append(taint_var)
-                    case vast.Assign:
-                        children_new.append(child)
-                        ret = flow_tracker.track_flow(child, module.name)
-                        children_new.append(ret)
                     case (
-                        vast.Substitution
+                        vast.Assign
+                        | vast.Substitution
                         | vast.NonblockingSubstitution
                         | vast.BlockingSubstitution
                     ):
