@@ -51,14 +51,14 @@ class FlowTracker(object):
                 id_variable: vast.Variable = names[id_name]
                 id_width = id_variable.width
                 if id_width is not None:
-                    width = str(int(id_width.msb.value) - int(id_width.lsb.value))
+                    width = str(int(id_width.msb.value) - int(id_width.lsb.value) + 1)
                     return vast.IntConst(width)
                 else:
                     return vast.IntConst("1")
             case vast.Partselect:
                 # TODO: dimensions
                 if isinstance(lvalue_var.msb, vast.Constant) and isinstance(lvalue_var.lsb, vast.Constant):
-                    width = str(int(lvalue_var.msb.value) - int(lvalue_var.lsb.value))
+                    width = str(int(lvalue_var.msb.value) - int(lvalue_var.lsb.value) + 1)
                     return vast.IntConst(width)
                 else:
                     var_id: vast.Identifier = lvalue_var.var
@@ -66,7 +66,7 @@ class FlowTracker(object):
                     var_variable: vast.Variable = names[var_name]
                     var_width = var_variable.width
                     if var_width is not None:
-                        width = str(int(var_width.msb.value) - int(var_width.lsb.value))
+                        width = str(int(var_width.msb.value) - int(var_width.lsb.value) + 1)
                         return vast.IntConst(width)
                     else:
                         return vast.IntConst("1")
@@ -76,7 +76,7 @@ class FlowTracker(object):
                 var_dimensions = var_variable.dimensions
                 var_width = var_variable.width
                 if (var_dimensions is not None) and (var_width is not None):
-                    width = str(int(var_width.msb.value) - int(var_width.lsb.value))
+                    width = str(int(var_width.msb.value) - int(var_width.lsb.value) + 1)
                     return vast.IntConst(width)
                 else:
                     return vast.IntConst("1")
