@@ -1,0 +1,18 @@
+{
+  "top_module": "mux4to1",
+  "conditions": [
+    {
+      "name": "test_case_1",
+      "expected_output_signals": {
+        "o": "1111"
+      },
+      "sat_options": {
+        "set": {
+          "x": "1110",
+          "y": "1111"
+        },
+        "show": ["o", "x", "y"]
+      }
+    }
+  ]
+}
