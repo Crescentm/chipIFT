@@ -11,6 +11,8 @@ always@(*) begin
     end else begin
         if(cond2) begin
             o = v2;
+        end else begin
+            o = v1;
         end
     end
 end
