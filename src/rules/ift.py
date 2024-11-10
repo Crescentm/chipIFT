@@ -29,8 +29,7 @@ class UandIFT(OperatorIFT):
         Y_or_Yt = vast.Or(left=Y, right=Y_t)
         uand_Y_or_Yt = vast.Uand(right=Y_or_Yt)
         result = vast.And(left=uor_Yt, right=uand_Y_or_Yt)
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 class UnandIFT(OperatorIFT):
@@ -41,8 +40,7 @@ class UnandIFT(OperatorIFT):
         Y_or_Yt = vast.Or(left=Y, right=Y_t)
         uand_Y_or_Yt = vast.Uand(right=Y_or_Yt)
         result = vast.And(left=uor_Yt, right=uand_Y_or_Yt)
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 class UorIFT(OperatorIFT):
@@ -54,8 +52,7 @@ class UorIFT(OperatorIFT):
         not_Y_or_Yt = vast.Or(left=not_Y, right=Y_t)
         uand_not_Y_or_Yt = vast.Uand(right=not_Y_or_Yt)
         result = vast.And(left=uor_Yt, right=uand_not_Y_or_Yt)
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 class UnorIFT(OperatorIFT):
@@ -67,8 +64,7 @@ class UnorIFT(OperatorIFT):
         not_Y_or_Yt = vast.Or(left=not_Y, right=Y_t)
         uand_not_Y_or_Yt = vast.Uand(right=not_Y_or_Yt)
         result = vast.And(left=uor_Yt, right=uand_not_Y_or_Yt)
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 class UxorIFT(OperatorIFT):
@@ -76,8 +72,7 @@ class UxorIFT(OperatorIFT):
         Y_t = self.operands_tags[0]
         uor_Yt = vast.Uor(right=Y_t)
         result = uor_Yt
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 class UxnorIFT(OperatorIFT):
@@ -85,8 +80,7 @@ class UxnorIFT(OperatorIFT):
         Y_t = self.operands_tags[0]
         uor_Yt = vast.Uor(right=Y_t)
         result = uor_Yt
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 # Arithmetic
@@ -203,8 +197,7 @@ class LnotIFT(OperatorIFT):
         lnot_Y_and_not_Yt = vast.Ulnot(right=Y_and_not_Yt)
         uor_Yt = vast.Uor(right=Y_t)
         result = vast.And(left=lnot_Y_and_not_Yt, right=uor_Yt)
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 class LandIFT(OperatorIFT):
@@ -236,8 +229,7 @@ class LandIFT(OperatorIFT):
 
         # O_t = ( (|(X & ~X_t)) & (|(Y & ~Y_t)) ) ^ ((|(X|X_t)) & (|(Y|Y_t)))
         result = vast.Xor(left=and_part, right=and_part2)
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 class LorIFT(OperatorIFT):
@@ -270,8 +262,7 @@ class LorIFT(OperatorIFT):
         # O_t = ((| (X & ~X_t )) | (| (Y & ~Y_t))) ^ ((| (X | X_t)) | (| (Y | Y_t)))
         result = vast.Xor(left=left_or, right=right_or)
 
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 # bitwise
@@ -345,8 +336,7 @@ class LtIFT(OperatorIFT):
         )  # ((X | X_t)) < (Y & ~Y_t)
 
         result = vast.Xor(left=expr1, right=expr2)
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 class GtIFT(OperatorIFT):
@@ -372,8 +362,7 @@ class GtIFT(OperatorIFT):
         )  # ((X | X_t)) > (Y & ~Y_t)
 
         result = vast.Xor(left=expr1, right=expr2)
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 class GeIFT(OperatorIFT):
@@ -399,8 +388,7 @@ class GeIFT(OperatorIFT):
         )  # ((X | X_t)) >= (Y & ~Y_t)
 
         result = vast.Xor(left=expr1, right=expr2)
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 class LeIFT(OperatorIFT):
@@ -426,8 +414,7 @@ class LeIFT(OperatorIFT):
         )  # ((X | X_t)) <= (Y & ~Y_t)
 
         result = vast.Xor(left=expr1, right=expr2)
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 # Case Eq
@@ -458,8 +445,7 @@ class EqlIFT(OperatorIFT):
 
         # O_t = expr1 ^ expr2
         result = vast.Xor(left=expr1, right=expr2)
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 class NelIFT(OperatorIFT):
@@ -484,8 +470,7 @@ class NelIFT(OperatorIFT):
         )  # ((X | X_t)) != (Y & ~Y_t)
 
         result = vast.Xor(left=expr1, right=expr2)
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 # Logical Eq
@@ -515,8 +500,7 @@ class EqIFT(OperatorIFT):
 
         # O_t = expr1 ^ expr2
         result = vast.Xor(left=expr1, right=expr2)
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 class NeIFT(OperatorIFT):
@@ -542,8 +526,7 @@ class NeIFT(OperatorIFT):
         )  # ((X | X_t)) != (Y & ~Y_t)
 
         result = vast.Xor(left=expr1, right=expr2)
-        result_ext = vast.Repeat(vast.Concat([result]), self.lwidth)
-        return result_ext
+        return result
 
 
 # Shift (impercise)
@@ -552,7 +535,9 @@ class LshiftaIFT(OperatorIFT):
         X_t = self.operands_tags[0]
         Y_t = self.operands_tags[1]
 
-        result = vast.Or(left=X_t, right=Y_t)
+        Xt_or_Yt = vast.Or(left=X_t, right=Y_t)
+        result_1bit = vast.Uor(Xt_or_Yt)
+        result = vast.Repeat(vast.Concat([result_1bit]), self.lwidth)
         return result
 
 
@@ -561,7 +546,9 @@ class RshiftaIFT(OperatorIFT):
         X_t = self.operands_tags[0]
         Y_t = self.operands_tags[1]
 
-        result = vast.Or(left=X_t, right=Y_t)
+        Xt_or_Yt = vast.Or(left=X_t, right=Y_t)
+        result_1bit = vast.Uor(Xt_or_Yt)
+        result = vast.Repeat(vast.Concat([result_1bit]), self.lwidth)
         return result
 
 
@@ -570,7 +557,9 @@ class LshiftIFT(OperatorIFT):
         X_t = self.operands_tags[0]
         Y_t = self.operands_tags[1]
 
-        result = vast.Or(left=X_t, right=Y_t)
+        Xt_or_Yt = vast.Or(left=X_t, right=Y_t)
+        result_1bit = vast.Uor(Xt_or_Yt)
+        result = vast.Repeat(vast.Concat([result_1bit]), self.lwidth)
         return result
 
 
@@ -579,7 +568,9 @@ class RshiftIFT(OperatorIFT):
         X_t = self.operands_tags[0]
         Y_t = self.operands_tags[1]
 
-        result = vast.Or(left=X_t, right=Y_t)
+        Xt_or_Yt = vast.Or(left=X_t, right=Y_t)
+        result_1bit = vast.Uor(Xt_or_Yt)
+        result = vast.Repeat(vast.Concat([result_1bit]), self.lwidth)
         return result
 
 
