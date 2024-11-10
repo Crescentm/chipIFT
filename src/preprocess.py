@@ -1,4 +1,5 @@
 import pyverilog.vparser.ast as vast
+from functools import reduce
 import inspect
 
 
@@ -18,24 +19,28 @@ class Preprocess:
         self._ast: vast.Source = _ast
         self._module_list = _module_list
         self._module_num = len(_module_list)
-        self.taint_var: list[tuple[str, str]] = taint_var
+        self._taint_var: list[tuple[str, str]] = taint_var
+        self._current_module_index = 0
+        self._conditions_dict: dict[int, list] = {}
+        self._current_conditions = []
 
+        self.term_list: list[TaintVar] = []
         self.conditions_dicts: list[dict[int, list]] = []
-        self.current_module_index = 0
-        self.term_list = []
 
     def traverse(self):
-        self.conditions_dict: dict[int, list] = {}
-        self.current_conditions = []
+
+        self._conditions_dict: dict[int, list] = {}
         for module_index in range(self._module_num):
-            self.current_module_index = module_index
+            self._current_module_index = module_index
             ports: vast.Port = self._ast.description.definitions[
                 module_index
             ].portlist.ports
+            self._current_conditions = []
             self._traverse_node(ports)
             items = self._ast.description.definitions[module_index].items
+            self._current_conditions = []
             self._traverse_node(items)
-            self.conditions_dicts.append(self.conditions_dict)
+            self.conditions_dicts.append(self._conditions_dict)
 
         return self.conditions_dicts
 
@@ -53,22 +58,46 @@ class Preprocess:
                     | vast.NonblockingSubstitution
                     | vast.BlockingSubstitution
                 ):
-                    self.conditions_dict[child.lineno] = self.current_conditions
+                    self._conditions_dict[child.lineno] = (
+                        self._current_conditions.copy()
+                    )
                 case vast.IfStatement:
-                    self.current_conditions.append(child.cond)
+                    self._current_conditions.append(child.cond)
                     self._traverse_node(child.true_statement)
                     self._traverse_node(child.false_statement)
-                    self.current_conditions.pop()
+                    self._current_conditions.pop()
                 case vast.CaseStatement:
+                    all_case_cond = []
                     for case in child.caselist:
-                        self.current_conditions.append(vast.Eql(child.comp, case.cond))
-                        self._traverse_node(case.statement)
-                        self.current_conditions.pop()
+                        if case.cond is None:
+                            if all_case_cond:
+                                cond_node = reduce(vast.Land, all_case_cond)
+                                self._current_conditions.append(cond_node)
+                                self._traverse_node(case.statement)
+                                self._current_conditions.pop()
+                        else:
+                            self._current_conditions.append(
+                                vast.Eql(child.comp, case.cond[0])
+                            )
+                            self._traverse_node(case.statement)
+                            self._current_conditions.pop()
+                            all_case_cond.append(vast.NotEql(child.comp, case.cond[0]))
                 case vast.CasexStatement | vast.CasezStatement:
+                    all_case_cond = []
                     for case in child.caselist:
-                        self.current_conditions.append(vast.Eq(child.comp, case.cond))
-                        self._traverse_node(case.statement)
-                        self.current_conditions.pop()
+                        if case.cond is None:
+                            if all_case_cond:
+                                cond_node = reduce(vast.Land, all_case_cond)
+                                self._current_conditions.append(cond_node)
+                                self._traverse_node(case.statement)
+                                self._current_conditions.pop()
+                        else:
+                            self._current_conditions.append(
+                                vast.Eq(child.comp, case.cond[0])
+                            )
+                            self._traverse_node(case.statement)
+                            self._current_conditions.pop()
+                            all_case_cond.append(vast.NotEq(child.comp, case.cond[0]))
                 case (
                     vast.Variable
                     | vast.Port
@@ -83,12 +112,12 @@ class Preprocess:
                 ):
                     if (
                         child.name,
-                        self._module_list[self.current_module_index],
-                    ) in self.taint_var:
+                        self._module_list[self._current_module_index],
+                    ) in self._taint_var:
                         self.term_list.append(
                             TaintVar(
                                 child.name,
-                                self._module_list[self.current_module_index],
+                                self._module_list[self._current_module_index],
                                 child,
                             )
                         )
