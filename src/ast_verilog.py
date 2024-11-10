@@ -3,7 +3,7 @@ from src.rules.common import *
 from pyverilog.vparser.parser import parse
 from pyverilog.ast_code_generator.codegen import ASTCodeGenerator
 from src.dfg_verilog import DFGVerilog
-from src.preprocess import Preprocess, TaintVar
+from src.preprocessor import Preprocessor, TaintVar
 import pyverilog.vparser.ast as vast
 import inspect
 import copy
@@ -34,7 +34,7 @@ class ASTVerilog:
             define_list=define_list,
         )
 
-        preprocess = Preprocess(
+        preprocess = Preprocessor(
             ast,
             [module.name for module in ast.description.definitions],
             dfg.gen_taint_vars(),
@@ -51,14 +51,6 @@ class ASTVerilog:
         self.conditions_dicts: list[dict[int, list[vast.Operator]]] = (
             preprocess.conditions_dicts
         )
-        # term_dict = {}
-        # for term in self.terms_list:
-        #     if term_dict.get(term[1]) == None:
-        #         term_dict[term[1]] = [term[0]]
-        #     else:
-        #         term_dict[term[1]].append(term[0])
-
-        # self.term_dict = term_dict
 
     def show(self):
         self.source.show()

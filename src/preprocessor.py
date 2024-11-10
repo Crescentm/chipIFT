@@ -13,7 +13,7 @@ class TaintVar:
         return f"{self.var_name}:{self.module_type}"
 
 
-class Preprocess:
+class Preprocessor:
 
     def __init__(self, _ast, _module_list, taint_var) -> None:
         self._ast: vast.Source = _ast
