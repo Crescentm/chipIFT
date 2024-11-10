@@ -51,6 +51,10 @@ class ASTVerilog:
         self.conditions_dicts: list[dict[int, list[vast.Operator]]] = (
             preprocess.conditions_dicts
         )
+        # XXX: debug margin.
+        # right cond, but wrong type.
+        print(self.conditions_dicts[0][9])
+        print(self.conditions_dicts[0][11])
 
     def show(self):
         self.source.show()
@@ -99,7 +103,7 @@ class ASTVerilog:
                         cond: list[vast.Operator] | None = self.conditions_dicts[
                             module_index
                         ].get(child.lineno)
-                        ret = flow_tracker.track_flow(child, module.name)
+                        ret = flow_tracker.track_flow(child, module.name, cond)
                         children_new.append(ret)
                     case vast.Instance:
                         new_ports = []

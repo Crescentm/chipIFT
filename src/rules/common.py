@@ -17,7 +17,8 @@ class FlowTracker(object):
         self.term_list = term_list
 
     # process the generation
-    def track_flow(self, node: vast.Node, module_name: str, conditions: list = []) -> vast.Node:
+    def track_flow(self, node: vast.Node, module_name: str, conditions: list[vast.Node] = []) -> vast.Node:
+        print(conditions)
         names = {_.var_name: _.value for _ in self.term_list if _.module_type == module_name}
         assert type(node) in self.assignment_operator
         if type(node) is vast.Assign:
@@ -112,7 +113,7 @@ class FlowTracker(object):
     #       1. repeat of those single bit operation(?)
     #       2. implicit ift
     def _track_rval(
-            self, node: vast.Rvalue, lwidth: vast.IntConst, names: dict, conditions: list = []
+            self, node: vast.Rvalue, lwidth: vast.IntConst, names: dict, conditions: list[vast.Node] = []
     ) -> vast.Rvalue:
         exp_ift = self._explicit_ift(node.var, lwidth, names)
         if conditions:
@@ -179,5 +180,14 @@ class FlowTracker(object):
     ) -> vast.Node:
         return self._generate_rule(node, lwidth, names)
 
-    def _implicit_ift(self, conditions: list, lwidth: vast.IntConst, names: dict) -> vast.Node:
-        return vast.IntConst(value="0")
+    def _implicit_ift(self, conditions: list[vast.Node], lwidth: vast.IntConst, names: dict) -> vast.Node:
+        condition_tags = []
+        for condition in conditions:
+            compressed_condition = vast.Uor(condition)
+            condition_tag = self._generate_rule(compressed_condition, lwidth, names)
+            condition_tags.append(condition_tag)
+        # relatively impercise one:
+        result = condition_tags[0]
+        for condition_tag in condition_tags[1:]:
+            result = vast.Or(result, condition_tag)
+        return result
