@@ -51,10 +51,6 @@ class ASTVerilog:
         self.conditions_dicts: list[dict[int, list[vast.Node]]] = (
             preprocess.conditions_dicts
         )
-        # XXX: debug margin.
-        # right cond, but wrong type.
-        print(self.conditions_dicts[0][9])
-        print(self.conditions_dicts[0][11])
 
     def show(self):
         self.source.show()
