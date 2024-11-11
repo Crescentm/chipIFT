@@ -95,7 +95,8 @@ class ASTVerilog:
                         else:
                             ret = flow_tracker.track_flow(child, module.name)
                         children_new.append(child)
-                        children_new.append(ret)
+                        if ret:
+                            children_new.append(ret)
                     case vast.Instance:
                         new_ports = []
                         for port in child.portlist:
