@@ -91,6 +91,9 @@ class Preprocessor:
                     | vast.Inout
                     | vast.Wire
                     | vast.Reg
+                    | vast.Integer
+                    | vast.Real
+                    | vast.Genvar
                 ):
 
                     self.term_list.append(
