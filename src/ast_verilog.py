@@ -27,17 +27,9 @@ class ASTVerilog:
             debug=False,
         )
 
-        dfg = DFGVerilog(
-            file_list,
-            topmodule=topmodule,
-            include_list=include_list,
-            define_list=define_list,
-        )
-
         preprocess = Preprocessor(
             ast,
             [module.name for module in ast.description.definitions],
-            dfg.gen_taint_vars(),
         )
         preprocess.traverse()
 

@@ -15,11 +15,10 @@ class TaintVar:
 
 class Preprocessor:
 
-    def __init__(self, _ast, _module_list, taint_var) -> None:
+    def __init__(self, _ast, _module_list) -> None:
         self._ast: vast.Source = _ast
         self._module_list = _module_list
         self._module_num = len(_module_list)
-        self._taint_var: list[tuple[str, str]] = taint_var
         self._current_module_index = 0
         self._conditions_dict: dict[int, list] = {}
         self._current_conditions = []
@@ -92,21 +91,15 @@ class Preprocessor:
                     | vast.Inout
                     | vast.Wire
                     | vast.Reg
-                    | vast.Integer
-                    | vast.Real
-                    | vast.Genvar
                 ):
-                    if (
-                        child.name,
-                        self._module_list[self._current_module_index],
-                    ) in self._taint_var:
-                        self.term_list.append(
-                            TaintVar(
-                                child.name,
-                                self._module_list[self._current_module_index],
-                                child,
-                            )
+
+                    self.term_list.append(
+                        TaintVar(
+                            child.name,
+                            self._module_list[self._current_module_index],
+                            child,
                         )
+                    )
                 case (
                     vast.Always
                     | vast.AlwaysFF
