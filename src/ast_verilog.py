@@ -107,7 +107,8 @@ class ASTVerilog:
                                 taint_port.argname = vast.Identifier(
                                     f"{port.argname.name}_t"
                                 )
-                                taint_port.portname = f"{port.portname}_t"
+                                if taint_port.portname is not None:
+                                    taint_port.portname = f"{port.portname}_t"
                                 new_ports.append(port)
                                 new_ports.append(taint_port)
                             else:
