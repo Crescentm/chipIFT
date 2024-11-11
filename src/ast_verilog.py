@@ -66,6 +66,11 @@ class ASTVerilog:
             children_new = []
             for child in children:
                 match type(child):
+                    case vast.Port:
+                        children_new.append(child)
+                        taint_port = copy.deepcopy(child)
+                        taint_port.name = f"{taint_port.name}_t"
+                        children_new.append(taint_port)
                     case vast.Ioport:
                         children_new.append(child)
                         # TODO: if Input/Output/Inout have nested structure
