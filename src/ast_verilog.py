@@ -116,6 +116,15 @@ class ASTVerilog:
                                     taint_port.portname = f"{port.portname}_t"
                                 new_ports.append(port)
                                 new_ports.append(taint_port)
+                            elif isinstance(port, vast.PortArg) and isinstance(
+                                port.argname, vast.Constant
+                            ):
+                                taint_port = copy.deepcopy(port)
+                                if taint_port.portname is not None:
+                                    taint_port.portname = f"{port.portname}_t"
+                                taint_port.argname = vast.IntConst("0")
+                                new_ports.append(port)
+                                new_ports.append(taint_port)
                             else:
                                 new_ports.append(port)
 
