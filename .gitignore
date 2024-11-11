@@ -8,6 +8,7 @@ __pycache__/
 
 # nix
 .direnv
+.envrc
 
 # C extensions
 *.so
