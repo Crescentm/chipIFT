@@ -1,0 +1,19 @@
+{
+    "top_module": "condition_case",
+    "conditions": [
+        {
+            "name": "test_case_1",
+            "expected_output_signals": {
+                "result": "1"
+            },
+            "sat_options": {
+                "set": {
+                    "value0": "1",
+                    "value1": "1",
+                    "cond": "1"
+                },
+                "show": ["result", "value0", "value1", "cond"]
+            }
+        }
+    ]
+}
