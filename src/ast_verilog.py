@@ -81,7 +81,14 @@ class ASTVerilog:
                             if isinstance(taint_ioport.second, vast.Variable):
                                 taint_ioport.second.name = f"{child.second.name}_t"
                             children_new.append(taint_ioport)
-                    case vast.Tri | vast.Wire | vast.Reg:
+                    case (
+                        vast.Tri
+                        | vast.Wire
+                        | vast.Reg
+                        | vast.Input
+                        | vast.Output
+                        | vast.Inout
+                    ):
                         children_new.append(child)
                         taint_var: vast.Reg = copy.deepcopy(child)
                         taint_var.name = f"{taint_var.name}_t"
