@@ -95,7 +95,6 @@ class ASTVerilog:
                         | vast.NonblockingSubstitution
                         | vast.BlockingSubstitution
                     ):
-                        children_new.append(child)
                         cond: list[vast.Node] | None = self.conditions_dicts[
                             module_index
                         ].get(child.lineno)
@@ -103,6 +102,7 @@ class ASTVerilog:
                             ret = flow_tracker.track_flow(child, module.name, cond)
                         else:
                             ret = flow_tracker.track_flow(child, module.name)
+                        children_new.append(child)
                         children_new.append(ret)
                     case vast.Instance:
                         new_ports = []
@@ -125,19 +125,53 @@ class ASTVerilog:
                                 child.module, child.name, new_ports, child.parameterlist
                             )
                         )
-                    case (
-                        vast.Constant
-                        | vast.IntConst
-                        | vast.FloatConst
-                        | vast.StringConst
-                    ):
-                        children_new.append(child)
+                    case vast.IfStatement:
+                        match type(child.true_statement):
+                            case (
+                                vast.Assign
+                                | vast.Substitution
+                                | vast.BlockingSubstitution
+                                | vast.NonblockingSubstitution
+                            ):
+                                if child.true_statement is not None:
+                                    true_statement = vast.Block(
+                                        traverse(child.true_statement)
+                                    )
+                                else:
+                                    true_statement = None
+
+                                if child.false_statement is not None:
+                                    false_statement = vast.Block(
+                                        traverse(child.false_statement)
+                                    )
+                                else:
+                                    false_statement = None
+                            case _:
+                                true_statement = traverse(child.true_statement)
+                                false_statement = traverse(child.false_statement)
+                        children_new.append(
+                            vast.IfStatement(
+                                child.cond, true_statement, false_statement
+                            )
+                        )
+                    case vast.Case:
+                        match type(child.statement):
+                            case (
+                                vast.Assign
+                                | vast.Substitution
+                                | vast.BlockingSubstitution
+                                | vast.NonblockingSubstitution
+                            ):
+                                statement = vast.Block(traverse(child.statement))
+                            case _:
+                                statement = traverse(child.statement)
+                        children_new.append(vast.Case(child.cond, statement))
+
                     case (
                         vast.Decl
                         | vast.Concat
                         | vast.SensList
                         | vast.Portlist
-                        | vast.IfStatement
                         | vast.Always
                         | vast.AlwaysFF
                         | vast.AlwaysComb
@@ -145,7 +179,6 @@ class ASTVerilog:
                         | vast.Width
                         | vast.GenerateStatement
                         | vast.Block
-                        | vast.Case
                         | vast.CaseStatement
                         | vast.CasexStatement
                         | vast.CasezStatement
@@ -171,10 +204,17 @@ class ASTVerilog:
                             param_values[key] = ret
 
                         children_new.append((child.__class__)(**param_values))
+                    case (
+                        vast.Constant
+                        | vast.IntConst
+                        | vast.FloatConst
+                        | vast.StringConst
+                    ):
+                        children_new.append(child)
                     case _:
                         children_new.append(child)
 
-            if not isinstance(node, tuple):
+            if not isinstance(node, tuple) and len(children_new) < 2:
                 return children_new[0]
             else:
                 return tuple(children_new)
