@@ -32,6 +32,7 @@ def generate_tmp_pathname() -> str:
 
 
 def main():
+    start_time = time.time()
     INFO = "ChipIFT"
     USAGE = "chipift -f <file list> -c <conditions.json>"
     VERSION = 0.1
@@ -115,10 +116,16 @@ def main():
 
     for i in range(ast.module_num):
         ast.traverse_modify_ast(module_index=i)
+    
+    finish_traverse_time = time.time()
+    print(f"Finish Modifying AST: {finish_traverse_time - start_time}")
+
     modified_code = ast.gen_code()
     with open(tmp_code_path, "w") as f:
         f.write(modified_code)
 
+    end_time = time.time()
+    print(f"Finish code generation: {end_time - start_time}")
     for condition in conditions:
         run_yosys(
             run_ys_file=tmp_ys_path,

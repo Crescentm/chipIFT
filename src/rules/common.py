@@ -55,12 +55,14 @@ class FlowTracker(object):
         return new_node
 
 
-    def _calculate_width(self, node: vast.Lvalue, names: dict) -> vast.IntConst | None:
-        lvalue_var = node.var
-        match type(lvalue_var):
+
+    def _calculate_width(self, node: vast.Node, names: dict) -> vast.IntConst | None:
+        match type(node):
+            case vast.Lvalue:
+                return self._calculate_width(node.var, names)
             case vast.Identifier:
                 # if not have information flow.
-                id_name = lvalue_var.name
+                id_name = node.name
                 id_variable: vast.Variable = names[id_name]
                 if type(id_variable) not in self.variable_to_be_tagged:
                     return None
@@ -72,13 +74,13 @@ class FlowTracker(object):
                     return vast.IntConst("1")
             case vast.Partselect:
                 # TODO: dimensions
-                var_id: vast.Identifier = lvalue_var.var
+                var_id: vast.Identifier = node.var
                 var_name: str = var_id.name
                 var_variable: vast.Variable = names[var_name]
                 if type(var_variable) not in self.variable_to_be_tagged:
                     return None
-                if isinstance(lvalue_var.msb, vast.Constant) and isinstance(lvalue_var.lsb, vast.Constant):
-                    width = str(int(lvalue_var.msb.value) - int(lvalue_var.lsb.value) + 1)
+                if isinstance(node.msb, vast.Constant) and isinstance(node.lsb, vast.Constant):
+                    width = str(int(node.msb.value) - int(node.lsb.value) + 1)
                     return vast.IntConst(width)
                 else:
                     var_width = var_variable.width
@@ -88,7 +90,7 @@ class FlowTracker(object):
                     else:
                         return vast.IntConst("1")
             case vast.Pointer:
-                var_name: str = lvalue_var.var.name
+                var_name: str = node.var.name
                 var_variable: vast.Variable = names[var_name]
                 if type(var_variable) not in self.variable_to_be_tagged:
                     return None
@@ -99,8 +101,17 @@ class FlowTracker(object):
                     return vast.IntConst(width)
                 else:
                     return vast.IntConst("1")
+            case vast.LConcat:
+                width_int: int = 0
+                for member in node.list:
+                    member_width = self._calculate_width(member, names)
+                    if member_width is not None:
+                        width_int += int(member_width.value)
+                    else:
+                        raise KeyError(f"found Integer | Real | Genvar in LConcat: {member}, {type(member), {member.lineno}}")
+                return vast.IntConst(str(width_int))
             case _:
-                raise KeyError("invalid node type in Lvalue?")
+                raise KeyError(f"invalid node type in Lvalue: {node}, {type(node)}, {node.lineno}")
 
     # track lvalue, generate the proper tag of lvalue
     def _replace_name(self, node: vast.Lvalue, names: dict) -> vast.Lvalue:
@@ -196,20 +207,21 @@ class FlowTracker(object):
 
     def _implicit_ift(self, conditions: list[vast.Node], lwidth: vast.IntConst, names: dict) -> vast.Node:
         # XXX: relatively impercise one:
-        # condition_tags = []
-        # for condition in conditions:
-        #     compressed_condition = vast.Uor(condition)
-        #     condition_tag = self._generate_rule(compressed_condition, lwidth, names)
-        #     condition_tags.append(condition_tag)
-        # result = condition_tags[0]
-        # for condition_tag in condition_tags[1:]:
-        #     result = vast.Or(result, condition_tag)
+        condition_tags = []
+        for condition in conditions:
+            compressed_condition = vast.Uor(condition)
+            condition_tag = self._generate_rule(compressed_condition, lwidth, names)
+            condition_tags.append(condition_tag)
+        result = condition_tags[0]
+        for condition_tag in condition_tags[1:]:
+            result = vast.Or(result, condition_tag)
         
         # relatively percise one:
-        compressed_condition_0 = vast.Uor(conditions[0])
-        condition_final = compressed_condition_0
-        for condition in conditions[1:]:
-            compressed_condition = vast.Uor(condition)
-            condition_final = vast.And(condition_final, compressed_condition)
-        result = self._generate_rule(condition_final, lwidth, names)
+        # compressed_condition_0 = vast.Uor(conditions[0])
+        # condition_final = compressed_condition_0
+        # for condition in conditions[1:]:
+        #     compressed_condition = vast.Uor(condition)
+        #     condition_final = vast.And(condition_final, compressed_condition)
+        # result = self._generate_rule(condition_final, lwidth, names)
+
         return result
