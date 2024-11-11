@@ -48,7 +48,7 @@ class ASTVerilog:
         self.source: vast.Source = ast
         self.module_num = len(ast.children()[0].children())
         self.module_name_list = [module.name for module in ast.description.definitions]
-        self.conditions_dicts: list[dict[int, list[vast.Operator]]] = (
+        self.conditions_dicts: list[dict[int, list[vast.Node]]] = (
             preprocess.conditions_dicts
         )
 
@@ -96,10 +96,13 @@ class ASTVerilog:
                         | vast.BlockingSubstitution
                     ):
                         children_new.append(child)
-                        cond: list[vast.Operator] | None = self.conditions_dicts[
+                        cond: list[vast.Node] | None = self.conditions_dicts[
                             module_index
                         ].get(child.lineno)
-                        ret = flow_tracker.track_flow(child, module.name)
+                        if cond:
+                            ret = flow_tracker.track_flow(child, module.name, cond)
+                        else:
+                            ret = flow_tracker.track_flow(child, module.name)
                         children_new.append(ret)
                     case vast.Instance:
                         new_ports = []
