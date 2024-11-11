@@ -57,7 +57,7 @@ class ASTVerilog:
         module_list = list(self.source.description.definitions)
         flow_tracker = FlowTracker(term_list=self.terms_list)
 
-        def traverse(node):
+        def traverse(node, addBlock=False):
             # node may be a tuple or a single node
             if not isinstance(node, tuple):
                 children = (node,)
@@ -128,14 +128,14 @@ class ASTVerilog:
                             ):
                                 if child.true_statement is not None:
                                     true_statement = vast.Block(
-                                        traverse(child.true_statement)
+                                        traverse(child.true_statement, addBlock=True)
                                     )
                                 else:
                                     true_statement = None
 
                                 if child.false_statement is not None:
                                     false_statement = vast.Block(
-                                        traverse(child.false_statement)
+                                        traverse(child.false_statement, addBlock=True)
                                     )
                                 else:
                                     false_statement = None
@@ -155,7 +155,9 @@ class ASTVerilog:
                                 | vast.BlockingSubstitution
                                 | vast.NonblockingSubstitution
                             ):
-                                statement = vast.Block(traverse(child.statement))
+                                statement = vast.Block(
+                                    traverse(child.statement, addBlock=True)
+                                )
                             case _:
                                 statement = traverse(child.statement)
                         children_new.append(vast.Case(child.cond, statement))
@@ -207,7 +209,7 @@ class ASTVerilog:
                     case _:
                         children_new.append(child)
 
-            if not isinstance(node, tuple) and len(children_new) < 2:
+            if not isinstance(node, tuple) and addBlock == False:
                 return children_new[0]
             else:
                 return tuple(children_new)
