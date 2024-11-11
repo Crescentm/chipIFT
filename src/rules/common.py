@@ -13,11 +13,20 @@ class FlowTracker(object):
         vast.BlockingSubstitution,
     )
 
+    variable_to_be_tagged = (
+        vast.Input,
+        vast.Output,
+        vast.Inout,
+        vast.Tri,
+        vast.Wire,
+        vast.Reg
+    )
+
     def __init__(self, term_list: list[TaintVar]) -> None:
         self.term_list = term_list
 
     # process the generation
-    def track_flow(self, node: vast.Node, module_name: str, conditions: list[vast.Node] = []) -> vast.Node:
+    def track_flow(self, node: vast.Node, module_name: str, conditions: list[vast.Node] = []) -> vast.Node | None:
         names = {_.var_name: _.value for _ in self.term_list if _.module_type == module_name}
         assert type(node) in self.assignment_operator
         if type(node) is vast.Assign:
@@ -31,6 +40,9 @@ class FlowTracker(object):
 
         ltag = self._replace_name(lval, names)  # track lvalue 
         lwidth = self._calculate_width(lval, names)
+        # if not have information flow:
+        if lwidth is None:
+            return None
         rtag = self._track_rval(rval, lwidth, names, conditions)  # track rval
 
         match type(node):
@@ -43,12 +55,15 @@ class FlowTracker(object):
         return new_node
 
 
-    def _calculate_width(self, node: vast.Lvalue, names: dict) -> vast.IntConst:
+    def _calculate_width(self, node: vast.Lvalue, names: dict) -> vast.IntConst | None:
         lvalue_var = node.var
         match type(lvalue_var):
             case vast.Identifier:
+                # if not have information flow.
                 id_name = lvalue_var.name
                 id_variable: vast.Variable = names[id_name]
+                if type(id_variable) not in self.variable_to_be_tagged:
+                    return None
                 id_width = id_variable.width
                 if id_width is not None:
                     width = str(int(id_width.msb.value) - int(id_width.lsb.value) + 1)
@@ -57,13 +72,15 @@ class FlowTracker(object):
                     return vast.IntConst("1")
             case vast.Partselect:
                 # TODO: dimensions
+                var_id: vast.Identifier = lvalue_var.var
+                var_name: str = var_id.name
+                var_variable: vast.Variable = names[var_name]
+                if type(var_variable) not in self.variable_to_be_tagged:
+                    return None
                 if isinstance(lvalue_var.msb, vast.Constant) and isinstance(lvalue_var.lsb, vast.Constant):
                     width = str(int(lvalue_var.msb.value) - int(lvalue_var.lsb.value) + 1)
                     return vast.IntConst(width)
                 else:
-                    var_id: vast.Identifier = lvalue_var.var
-                    var_name: str = var_id.name
-                    var_variable: vast.Variable = names[var_name]
                     var_width = var_variable.width
                     if var_width is not None:
                         width = str(int(var_width.msb.value) - int(var_width.lsb.value) + 1)
@@ -73,6 +90,8 @@ class FlowTracker(object):
             case vast.Pointer:
                 var_name: str = lvalue_var.var.name
                 var_variable: vast.Variable = names[var_name]
+                if type(var_variable) not in self.variable_to_be_tagged:
+                    return None
                 var_dimensions = var_variable.dimensions
                 var_width = var_variable.width
                 if (var_dimensions is not None) and (var_width is not None):
@@ -81,8 +100,7 @@ class FlowTracker(object):
                 else:
                     return vast.IntConst("1")
             case _:
-                print("invalid node type in Lvalue?")
-                raise TypeError
+                raise KeyError("invalid node type in Lvalue?")
 
     # track lvalue, generate the proper tag of lvalue
     def _replace_name(self, node: vast.Lvalue, names: dict) -> vast.Lvalue:
@@ -108,9 +126,6 @@ class FlowTracker(object):
                 self._do_replace_name(child, names)
 
     # traverse rvalue of the expression, generate tracking rules
-    # TODO: width of lval
-    #       1. repeat of those single bit operation(?)
-    #       2. implicit ift
     def _track_rval(
             self, node: vast.Rvalue, lwidth: vast.IntConst, names: dict, conditions: list[vast.Node] = []
     ) -> vast.Rvalue:

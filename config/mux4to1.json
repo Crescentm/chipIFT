@@ -4,14 +4,17 @@
     {
       "name": "test_case_1",
       "expected_output_signals": {
-        "o": "1111"
+        "out": "1111"
       },
       "sat_options": {
         "set": {
-          "x": "1110",
-          "y": "1111"
+          "sel": "11",
+          "in0": "1111",
+          "in1": "1111",
+          "in2": "1111",
+          "in3": "1111"
         },
-        "show": ["o", "x", "y"]
+        "show": ["sel", "in0", "in1", "in2", "in3", "out"]
       }
     }
   ]
