@@ -9,9 +9,9 @@ module mux4to1 (
 
     always @(*) begin
         // 使用 if 语句
-        if (sel == 2'b00) begin
+        if (sel == 2'b00)
             out = in0;
-        end else if (sel == 2'b01) begin
+        if (sel == 2'b01) begin
             out = in1;
         end else if (sel == 2'b10) begin
             out = in2;
