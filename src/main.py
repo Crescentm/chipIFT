@@ -20,7 +20,6 @@ MODULE_LIST = [
     "s1423",
     "s13207",
     "s15850",
-    "s35932",
 ]
 
 
@@ -86,6 +85,14 @@ def main():
     optparser.add_option(
         "-D", dest="define", action="append", default=[], help="Macro Definition"
     )
+    optparser.add_option(
+        "-t",
+        "--time",
+        dest="time_flag",
+        action="store_true",
+        default=False,
+        help="Collect time overhead",
+    )
     (options, _) = optparser.parse_args()
 
     if options.showversion:
@@ -116,16 +123,19 @@ def main():
 
     for i in range(ast.module_num):
         ast.traverse_modify_ast(module_index=i)
-    
-    finish_traverse_time = time.time()
-    print(f"Finish Modifying AST: {finish_traverse_time - start_time}")
+
+    if options.time_flag:
+        finish_traverse_time = time.time()
+        print(f"[I] Finish Modifying AST: {finish_traverse_time - start_time}")
 
     modified_code = ast.gen_code()
     with open(tmp_code_path, "w") as f:
         f.write(modified_code)
 
-    end_time = time.time()
-    print(f"Finish code generation: {end_time - start_time}")
+    if options.time_flag:
+        codegen_time = time.time()
+        print(f"[I] Finish code generation: {codegen_time - start_time}")
+
     for condition in conditions:
         run_yosys(
             run_ys_file=tmp_ys_path,
@@ -135,6 +145,9 @@ def main():
             condition=condition,
             result_folder=options.result_path,
         )
+    if options.time_flag:
+        end_time = time.time()
+        print(f"[I] Finish SAT: {end_time - start_time}")
 
 
 if __name__ == "__main__":

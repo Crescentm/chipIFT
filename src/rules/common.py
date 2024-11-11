@@ -5,6 +5,7 @@ from src.preprocessor import TaintVar
 
 # TODO: proper exception?
 
+
 # Generate IFT snippet
 class FlowTracker(object):
     assignment_operator = (
@@ -19,15 +20,19 @@ class FlowTracker(object):
         vast.Inout,
         vast.Tri,
         vast.Wire,
-        vast.Reg
+        vast.Reg,
     )
 
     def __init__(self, term_list: list[TaintVar]) -> None:
         self.term_list = term_list
 
     # process the generation
-    def track_flow(self, node: vast.Node, module_name: str, conditions: list[vast.Node] = []) -> vast.Node | None:
-        names = {_.var_name: _.value for _ in self.term_list if _.module_type == module_name}
+    def track_flow(
+        self, node: vast.Node, module_name: str, conditions: list[vast.Node] = []
+    ) -> vast.Node | None:
+        names = {
+            _.var_name: _.value for _ in self.term_list if _.module_type == module_name
+        }
         assert type(node) in self.assignment_operator
         if type(node) is vast.Assign:
             lval = node.left
@@ -36,9 +41,11 @@ class FlowTracker(object):
             lval = node.left
             rval = node.right
         else:
-            raise TypeError
+            raise KeyError(
+                f"[E] Not an assignment operator: {node}, {type(node)}, {node.lineno}"
+            )
 
-        ltag = self._replace_name(lval, names)  # track lvalue 
+        ltag = self._replace_name(lval, names)  # track lvalue
         lwidth = self._calculate_width(lval, names)
         # if not have information flow:
         if lwidth is None:
@@ -53,8 +60,6 @@ class FlowTracker(object):
             case vast.BlockingSubstitution:
                 new_node = vast.BlockingSubstitution(left=ltag, right=rtag)
         return new_node
-
-
 
     def _calculate_width(self, node: vast.Node, names: dict) -> vast.IntConst | None:
         match type(node):
@@ -79,13 +84,17 @@ class FlowTracker(object):
                 var_variable: vast.Variable = names[var_name]
                 if type(var_variable) not in self.variable_to_be_tagged:
                     return None
-                if isinstance(node.msb, vast.Constant) and isinstance(node.lsb, vast.Constant):
+                if isinstance(node.msb, vast.Constant) and isinstance(
+                    node.lsb, vast.Constant
+                ):
                     width = str(int(node.msb.value) - int(node.lsb.value) + 1)
                     return vast.IntConst(width)
                 else:
                     var_width = var_variable.width
                     if var_width is not None:
-                        width = str(int(var_width.msb.value) - int(var_width.lsb.value) + 1)
+                        width = str(
+                            int(var_width.msb.value) - int(var_width.lsb.value) + 1
+                        )
                         return vast.IntConst(width)
                     else:
                         return vast.IntConst("1")
@@ -108,10 +117,14 @@ class FlowTracker(object):
                     if member_width is not None:
                         width_int += int(member_width.value)
                     else:
-                        raise KeyError(f"found Integer | Real | Genvar in LConcat: {member}, {type(member), {member.lineno}}")
+                        raise KeyError(
+                            f"[E] found Integer | Real | Genvar in LConcat: {member}, {type(member), {member.lineno}}"
+                        )
                 return vast.IntConst(str(width_int))
             case _:
-                raise KeyError(f"invalid node type in Lvalue: {node}, {type(node)}, {node.lineno}")
+                raise KeyError(
+                    f"[E] invalid node type in Lvalue: {node}, {type(node)}, {node.lineno}"
+                )
 
     # track lvalue, generate the proper tag of lvalue
     def _replace_name(self, node: vast.Lvalue, names: dict) -> vast.Lvalue:
@@ -138,7 +151,11 @@ class FlowTracker(object):
 
     # traverse rvalue of the expression, generate tracking rules
     def _track_rval(
-            self, node: vast.Rvalue, lwidth: vast.IntConst, names: dict, conditions: list[vast.Node] = []
+        self,
+        node: vast.Rvalue,
+        lwidth: vast.IntConst,
+        names: dict,
+        conditions: list[vast.Node] = [],
     ) -> vast.Rvalue:
         exp_ift = self._explicit_ift(node.var, lwidth, names)
         if conditions:
@@ -205,7 +222,9 @@ class FlowTracker(object):
     ) -> vast.Node:
         return self._generate_rule(node, lwidth, names)
 
-    def _implicit_ift(self, conditions: list[vast.Node], lwidth: vast.IntConst, names: dict) -> vast.Node:
+    def _implicit_ift(
+        self, conditions: list[vast.Node], lwidth: vast.IntConst, names: dict
+    ) -> vast.Node:
         # XXX: relatively impercise one:
         condition_tags = []
         for condition in conditions:
@@ -215,7 +234,7 @@ class FlowTracker(object):
         result = condition_tags[0]
         for condition_tag in condition_tags[1:]:
             result = vast.Or(result, condition_tag)
-        
+
         # relatively percise one:
         # compressed_condition_0 = vast.Uor(conditions[0])
         # condition_final = compressed_condition_0

@@ -1,10 +1,14 @@
 import pyverilog.vparser.ast as vast
 from abc import ABC, abstractmethod
 
+
 # base
 class OperatorIFT(ABC):
     def __init__(
-        self, operands: list = [], operands_tags: list = [], lwidth: vast.IntConst = vast.IntConst("-1")
+        self,
+        operands: list = [],
+        operands_tags: list = [],
+        lwidth: vast.IntConst = vast.IntConst("-1"),
     ) -> None:
         self.lwidth = lwidth
         self.operands = operands

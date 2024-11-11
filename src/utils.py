@@ -52,7 +52,7 @@ def file_exists(file_list: list):
 
     for f in file_list:
         if not os.path.exists(f):
-            raise IOError("file not found: " + f)
+            raise IOError("[E] file not found: " + f)
 
 
 def dfnode_2_astnode(dfnode):
@@ -66,7 +66,7 @@ def dfnode_2_astnode(dfnode):
                 retr = dfnode_2_astnode(dfnode.nextnodes[1])
                 return dfop_mark[dfnode.operator](left=retl, right=retr)  # type: ignore
             else:
-                raise ValueError("Invalid number of operands")
+                raise ValueError("[E] Invalid number of operands")
         case vdfg.DFIntConst | vdfg.DFFloatConst | vdfg.DFStringConst:
             ret = dfnode.eval()
             return const_mark[type(dfnode)](str(ret))
@@ -80,7 +80,7 @@ def dfnode_2_astnode(dfnode):
             else:
                 return vast.IntConst(dfnode.value)
         case _:
-            print("Unknown type: ", type(dfnode))
+            print("[E]Unknown type: ", type(dfnode))
             return dfnode
 
 
@@ -118,7 +118,7 @@ def new_decl(decltype: DeclType, name: list[str], **args) -> vast.Decl:
         return vast.Decl(tuple(decl))
 
     else:
-        raise ValueError("Invalid declaration type")
+        raise ValueError("[E] Invalid declaration type")
 
 
 def taint_variable(child: vast.Variable):
