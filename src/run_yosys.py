@@ -96,8 +96,8 @@ def run_yosys_sat(run_ys_file, verilog_file, result_json_file, top_module, condi
         sat_cmd += f" -seq {seq_steps}"
         for step in range(1, seq_steps + 1):
             clk_value = step % 2  # 交替设置 clk 为 0 和 1
-            sat_cmd += f" -set-at {step} clk {clk_value}"
-        sat_cmd += f" -show clk"
+            sat_cmd += f" -set-at {step} CK {clk_value}" # FIXME: clock signal should be user defined
+        sat_cmd += f" -show CK" # FIXME
 
     sat_options = condition.get("sat_options", {})
 
