@@ -8,12 +8,13 @@ readme = "README.md"
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.12,<3.14"
 pyverilog = { git = "https://github.com/barnard33-233/Pyverilog.git", branch = "develop" }
 jinja2 = "^3.1.4"
 ply = "^3.11"
 pytest = "^8.3.3"
 black = "^24.8.0"
+pyinstaller = "^6.11.1"
 
 
 [build-system]

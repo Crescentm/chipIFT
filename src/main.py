@@ -1,26 +1,15 @@
 import sys
 import os
-from optparse import OptionParser
 import hashlib
 import time
-
+import argparse
 from src import run_yosys
 from src.ast_verilog import ASTVerilog
-
 from src.run_yosys import parse_config, run_yosys
 
 CODE_FILE = "code.v"
 YS_FILE = "a.ys"
 RESULT_FILE = "result.json"
-MODULE_LIST = [
-    "c2670",
-    "c3540",
-    "c5315",
-    "c6288",
-    "s1423",
-    "s13207",
-    "s15850",
-]
 
 
 def generate_tmp_pathname() -> str:
@@ -30,19 +19,11 @@ def generate_tmp_pathname() -> str:
     return f"/tmp/tmp-{hashval}-chipift"
 
 
-def main():
-    start_time = time.time()
-    INFO = "ChipIFT"
-    USAGE = "chipift -f <file list> -c <conditions.json>"
-    VERSION = 0.1
+def get_parser():
 
-    def showversion():
-        print(f"{INFO} {VERSION}")
-        print(f"{USAGE}")
-        sys.exit()
+    parser = argparse.ArgumentParser(description="ChipIFT - A tool for Verilog IFT")
 
-    optparser = OptionParser()
-    optparser.add_option(
+    parser.add_argument(
         "-v",
         "--version",
         dest="showversion",
@@ -50,15 +31,18 @@ def main():
         default=False,
         help="Show the version",
     )
-    optparser.add_option(
+
+    parser.add_argument(
         "-f",
         "--files",
         dest="filelist",
-        action="append",
+        nargs="+",
+        action="store",
         default=[],
         help="Source code list",
     )
-    optparser.add_option(
+
+    parser.add_argument(
         "-c",
         "--condition",
         dest="path_to_condition",
@@ -66,26 +50,36 @@ def main():
         default="./config.json",
         help="Condition file",
     )
-    optparser.add_option(
+
+    parser.add_argument(
         "-o",
         "--output",
         dest="result_path",
         action="store",
-        default="./result",
+        default="./result.json",
         help="result directory",
     )
-    optparser.add_option(
+
+    parser.add_argument(
         "-I",
         "--include",
         dest="include",
-        action="append",
+        action="store",
         default=[],
         help="Include path",
+        nargs="+",
     )
-    optparser.add_option(
-        "-D", dest="define", action="append", default=[], help="Macro Definition"
+
+    parser.add_argument(
+        "-D",
+        dest="define",
+        action="store",
+        default=[],
+        help="Macro Definition",
+        nargs="+",
     )
-    optparser.add_option(
+
+    parser.add_argument(
         "-t",
         "--time",
         dest="time_flag",
@@ -93,13 +87,28 @@ def main():
         default=False,
         help="Collect time overhead",
     )
-    (options, _) = optparser.parse_args()
+
+    return parser
+
+
+def main():
+    INFO = "ChipIFT"
+    VERSION = 0.1
+
+    def showversion():
+        print(f"{INFO} {VERSION}")
+        sys.exit()
+
+    parser = get_parser()
+    options = parser.parse_args()
 
     if options.showversion:
         showversion()
+        exit()
 
-    if not options.filelist:
-        showversion()
+    if len(options.filelist) <= 0:
+        parser.print_help()
+        exit()
 
     # save temp files
     tmp_path = generate_tmp_pathname()
@@ -113,7 +122,7 @@ def main():
             raise IOError("file not found: " + f)
 
     # check wether result path exists
-
+    start_time = time.time()
     top_module, conditions = parse_config(options.path_to_condition)
     ast = ASTVerilog(
         options.filelist,
