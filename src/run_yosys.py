@@ -84,6 +84,8 @@ def run_yosys_sat(run_ys_file, verilog_file, result_json_file, top_module, condi
     ys_script.append("simplemap")
     sat_cmd = "sat"
 
+    sat_cmd += " -ignore_unknown_cells"
+
     # 检查是否为时序电路，并添加 -seq 选项
     is_sequential = condition.get("is_sequential", False)
     seq_steps = (
@@ -93,11 +95,14 @@ def run_yosys_sat(run_ys_file, verilog_file, result_json_file, top_module, condi
     )
 
     if is_sequential and seq_steps is not None:
+        timing_signal = condition.get("timing_signal", None)
+        if timing_signal is None:
+            timing_signal = "clk"
         sat_cmd += f" -seq {seq_steps}"
         for step in range(1, seq_steps + 1):
             clk_value = step % 2  # 交替设置 clk 为 0 和 1
-            sat_cmd += f" -set-at {step} CK {clk_value}" # FIXME: clock signal should be user defined
-        sat_cmd += f" -show CK" # FIXME
+            sat_cmd += f" -set-at {step} {timing_signal} {clk_value}" # FIXME: clock signal should be user defined
+        sat_cmd += f" -show {timing_signal}" # FIXME
 
     sat_options = condition.get("sat_options", {})
 
